@@ -12,6 +12,7 @@
 <link rel="icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* VOICE: a native-feeling phone app for the studio, calm and quick to use with clay on your hands
    IDEA: an iOS settings-style notebook: large titles, grouped lists, stage sections that fold away
@@ -411,7 +412,7 @@ function xsecSvg(L,clay){
 
 /* storage */
 async function putPiece(p){const prev=S.pieces;const i=prev.findIndex(x=>x.id===p.id);S.pieces=i>=0?prev.map(x=>x.id===p.id?p:x):[...prev,p];
-  if(cloud){try{await db.collection('pieces').doc(p.id).set(p)}catch(e){S.pieces=prev;throw e}}else if(!lsSet('pieces',S.pieces)){S.pieces=prev;throw new Error('full')}}
+  if(cloud){try{await db.collection('pieces').doc(p.id).set(p)}catch(e){S.pieces=prev;throw e}try{onPieceSaved(p.id)}catch(e){}}else if(!lsSet('pieces',S.pieces)){S.pieces=prev;throw new Error('full')}}
 async function delPiece(id){const prev=S.pieces;S.pieces=prev.filter(x=>x.id!==id);if(cloud){try{await db.collection('pieces').doc(id).delete()}catch(e){S.pieces=prev;throw e}}else lsSet('pieces',S.pieces)}
 async function putFiring(f){const prev=S.firings;const i=prev.findIndex(x=>x.id===f.id);S.firings=i>=0?prev.map(x=>x.id===f.id?f:x):[...prev,f];
   if(cloud){try{await db.collection('firings').doc(f.id).set(f)}catch(e){S.firings=prev;throw e}}else if(!lsSet('firings',S.firings)){S.firings=prev;throw new Error('full')}}
@@ -497,7 +498,7 @@ function grow(act,id,label,right='',sub=''){return `<button class="grow" data-ac
 function vSettings(){
   const c=n=>`<span class="cnt">${n}</span>`;
   return `<div class="lt"><h1>Settings</h1></div><div class="status"><span class="dot ${S.on?'on':''}" id="stDot"></span><span id="stTxt">${esc(statusTxt)}</span></div>${banner()}
-  <h2 class="gh">Account</h2><div class="group">${grow('acct','','Signed in as',`<span class="val">${esc(userEmail)}</span>`)}${grow('logout','','Log out')}</div>
+  <h2 class="gh">Account</h2><div class="group">${grow('acct','','Signed in as',`<span class="val">${esc(userEmail)}</span>`)}${grow('logout','','Log out')}</div>${driveGroup()}
   <h2 class="gh">Backup</h2><div class="group">${grow('page','backup','Export Backup','','Copy all your data as text')}${grow('page','restore','Import Backup','','Restore data from a previous backup')}</div>
   <h2 class="gh">Studio</h2><div class="group">${grow('page','firings','Firing Log',c(S.firings.length))}${grow('page','shrink','Shrinkage Calculator')}</div>
   <h2 class="gh">Preferences</h2><div class="group">${grow('page','stages','Stages',c(stages().length))}${CATS.map(([k,l])=>grow('cat',k,l,c(libNames(k).length+usedNotInLib(k).length))).join('')}</div>
@@ -1088,6 +1089,82 @@ else{
     if(!session&&started){location.reload();return}
     if(!session&&ev==='INITIAL_SESSION')setTimeout(()=>authView('login'),0)});
 }
+
+/* ---------- Google Drive backup ---------- */
+const G_CLIENT='439257307194-tj0jaqsob3h9jqtsk28qo22quk81i8l4.apps.googleusercontent.com',G_SCOPE='https://www.googleapis.com/auth/drive.file';
+let gTok=null,gExp=0,gClient=null,gRoot=null,gBusy=false,gErr='',gTimer=null;
+const dState=()=>{const s=lsGet('drive.'+me.id,null)||{};return{on:!!s.on,pending:Array.isArray(s.pending)?s.pending:[],last:s.last||null,root:s.root||null}};
+const dSave=s=>lsSet('drive.'+me.id,s);
+const gReady=()=>!!gTok&&Date.now()<gExp-60000;
+const reSettings=()=>{if(view==='settings'&&!page&&!sheet)render()};
+function gConnect(first){return new Promise((res,rej)=>{
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))return rej(new Error('gis'));
+  if(!gClient)gClient=google.accounts.oauth2.initTokenClient({client_id:G_CLIENT,scope:G_SCOPE,callback:()=>{}});
+  gClient.callback=r=>{if(!r||r.error)return rej(new Error(r&&r.error||'denied'));
+    if(!google.accounts.oauth2.hasGrantedAllScopes(r,G_SCOPE))return rej(new Error('scope'));
+    gTok=r.access_token;gExp=Date.now()+(+r.expires_in||3600)*1000;res()};
+  gClient.error_callback=e=>rej(new Error(e&&e.type||'popup'));
+  gClient.requestAccessToken({prompt:first?'consent':''})})}
+function gFailMsg(e){const m=e&&e.message||'';
+  if(m==='access_denied'||m==='denied')return 'Google did not allow it. Your Google account must be on this app’s test-user list: ask the person who runs Pottery Log to add your Gmail.';
+  if(m==='popup_closed')return 'The Google window was closed before you finished.';
+  if(m==='popup_failed_to_open')return 'Your browser blocked the Google window. Allow pop-ups for this site and try again.';
+  if(m==='scope')return 'Tick the box that lets Pottery Log save its files to your Drive, then try again.';
+  if(m==='gis')return 'Google sign-in did not load. Check your connection and reload.';
+  return 'Could not reach Google Drive. Try again.'}
+async function gApi(url,opt={}){const r=await fetch(url,{...opt,headers:{Authorization:'Bearer '+gTok,...(opt.headers||{})}});
+  if(r.status===401){gTok=null;throw new Error('expired')}if(!r.ok)throw new Error('drive '+r.status);return r.status===204?null:r.json()}
+const gq=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+async function gFind(q){const u='https://www.googleapis.com/drive/v3/files?'+new URLSearchParams({q:q+' and trashed=false',fields:'files(id,name,appProperties)',pageSize:'1000',spaces:'drive'});return (await gApi(u)).files||[]}
+async function gFolder(name,parent,props){return (await gApi('https://www.googleapis.com/drive/v3/files?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',...(parent?{parents:[parent]}:{}),appProperties:props})})).id}
+function gUpload(meta,blob,id){const b='pl'+uid();
+  const body=new Blob(['--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: '+(blob.type||'application/octet-stream')+'\r\n\r\n',blob,'\r\n--'+b+'--\r\n']);
+  return gApi('https://www.googleapis.com/upload/drive/v3/files'+(id?'/'+id:'')+'?uploadType=multipart&fields=id',{method:id?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body})}
+async function gRootId(){if(gRoot)return gRoot;
+  let f=await gFind("appProperties has { key='plRoot' and value='"+gq(me.id)+"' }");
+  gRoot=f.length?f[0].id:await gFolder('Pottery Log',null,{plRoot:me.id});
+  const s=dState();s.root=gRoot;dSave(s);return gRoot}
+async function backupPiece(p){
+  const root=await gRootId(),name=(String(p.title||'').trim()||'Untitled piece').replace(/[\/\\]/g,'-').slice(0,100);
+  const [f]=await gFind("'"+root+"' in parents and appProperties has { key='plPiece' and value='"+gq(p.id)+"' }");
+  let fid;
+  if(!f)fid=await gFolder(name,root,{plPiece:p.id});
+  else{fid=f.id;if(f.name!==name)await gApi('https://www.googleapis.com/drive/v3/files/'+fid+'?fields=id',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})}
+  const files=await gFind("'"+fid+"' in parents");
+  const have=new Set(files.map(x=>x.appProperties&&x.appProperties.plPhoto).filter(Boolean));
+  const ps=photosByStage(p);
+  for(let i=0;i<ps.length;i++){const ph=ps[i],key=String(ph.aid||'').split('/').pop()||('p'+i);if(have.has(key))continue;
+    const s=safeSrc(ph.src);if(!s)continue;let blob=null;
+    if(s.startsWith('data:'))blob=dataToBlob(s);else{const r=await fetch(s);if(r.ok)blob=await r.blob()}
+    if(!blob)continue;
+    await gUpload({name:String(i+1).padStart(2,'0')+(ph.stage?' - '+ph.stage:'')+'.jpg',parents:[fid],appProperties:{plPhoto:key}},blob)}
+  const js=files.find(x=>x.appProperties&&x.appProperties.plJson);
+  const data=new Blob([JSON.stringify({...p,photos:p.photos.map(ph=>({stage:ph.stage||null}))},null,2)],{type:'application/json'});
+  await gUpload(js?{name:'piece.json'}:{name:'piece.json',parents:[fid],appProperties:{plJson:'1'}},data,js&&js.id)}
+function onPieceSaved(id){const s=dState();if(!s.on)return;if(!s.pending.includes(id)){s.pending.push(id);dSave(s)}
+  if(gReady()){clearTimeout(gTimer);gTimer=setTimeout(()=>driveFlush(false),1500)}}
+async function driveFlush(manual){
+  if(gBusy)return;if(!dState().on)return;
+  if(!gReady()){if(!manual)return;try{await gConnect(false)}catch(e){gErr=gFailMsg(e);reSettings();return}}
+  gBusy=true;gErr='';reSettings();let done=0;
+  try{for(const id of [...dState().pending]){const p=S.pieces.find(x=>x.id===id);if(p)await backupPiece(p);
+      const s=dState();s.pending=s.pending.filter(x=>x!==id);s.last=Date.now();dSave(s);if(p)done++}}
+  catch(e){gErr=e.message==='expired'?'Google asked you to reconnect. Tap Back up now.':'Some pieces were not backed up. Tap Back up now to try again.'}
+  finally{gBusy=false;reSettings()}
+  if(manual)toast(gErr?'Backup stopped':done?done+' piece'+(done===1?'':'s')+' backed up to Drive':'Drive is up to date')}
+function driveGroup(){if(!me)return '';const s=dState(),n=s.pending.length;
+  const foot='<p class="gfoot">'+(gErr?'<span style="color:var(--danger)">'+esc(gErr)+'</span>':'Each piece gets its own folder with its photos and a piece.json file. Pieces you delete here stay in Drive.')+'</p>';
+  if(!s.on)return `<h2 class="gh">Google Drive</h2><div class="group">${grow('driveon','','Connect Google Drive','',esc('Back up every piece to a Pottery Log folder in your Drive'))}</div>${gErr?foot:''}`;
+  const right=`<span class="val">${gBusy?'Working…':n?n+' waiting':'Up to date'}</span>`;
+  return `<h2 class="gh">Google Drive</h2><div class="group">${grow('drivenow','',gBusy?'Backing up…':'Back up now',right,s.last?esc('Last backup '+new Date(s.last).toLocaleString()):'')}${s.root?grow('driveopen','','Open Pottery Log folder in Drive'):''}${grow('driveoff','','Disconnect Google Drive')}</div>${foot}`}
+const driveActs={
+  driveon:async()=>{if(gBusy)return;try{await gConnect(true)}catch(e){gErr=gFailMsg(e);reSettings();return}
+    const s=dState();s.on=true;s.pending=S.pieces.map(p=>p.id);dSave(s);gErr='';driveFlush(true)},
+  drivenow:()=>{const s=dState();s.pending=[...new Set([...s.pending,...S.pieces.map(p=>p.id)])];dSave(s);driveFlush(true)},
+  driveopen:()=>{const s=dState();if(s.root)window.open('https://drive.google.com/drive/folders/'+encodeURIComponent(s.root),'_blank','noopener')},
+  driveoff:()=>{if(gTok){try{google.accounts.oauth2.revoke(gTok,()=>{})}catch(e){}}gTok=null;gRoot=null;const s=dState();s.on=false;s.pending=[];dSave(s);gErr='';reSettings();toast('Drive disconnected. Your Drive files stay where they are.')}};
+Object.assign(A,driveActs);
 }
 </script>
 </body>
