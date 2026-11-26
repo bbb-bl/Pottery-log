@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pottery Log</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pottery Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+/* VOICE: a native-feeling phone app for the studio, calm and quick to use with clay on your hands
+   IDEA: an iOS settings-style notebook: large titles, grouped lists, stage sections that fold away
+   PICTURE: My Pieces as stage sections with counts; each piece page shows its layer cross-section
+   COLOUR and TYPE: system greys in light and dark, one cobalt accent; system font, large bold titles
+   LAYOUT: three tabs (My Pieces, Search, Settings), pushed sub-pages with a back chevron, full-screen piece pages */
+:root{color-scheme:light dark;--bg:light-dark(#f2f2f7,#000);--card:light-dark(#fff,#1c1c1e);--fill:light-dark(#e5e5ea,#2c2c2e);--ink:light-dark(#111,#fff);--mute:light-dark(#6e6e73,#8e8e93);--line:light-dark(#d1d1d6,#38383a);--acc:light-dark(#2f55d4,#7d9bff);--accInk:#fff;--clay:light-dark(#b9a089,#6f5a4a);--danger:light-dark(#d70015,#ff6961);--ok:light-dark(#248a3d,#30d158)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Inter,system-ui,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.1;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+[hidden]{display:none!important}
+main{max-width:760px;margin:0 auto;padding:0 0 150px}
+.lt{padding:12px 16px 10px}
+.ltbar{display:flex;justify-content:space-between;align-items:center;min-height:48px;margin-bottom:6px}
+.lt h1{font-size:34px;font-weight:700;letter-spacing:.2px}
+.pill{min-height:44px;padding:0 20px;border-radius:999px;border:0;background:var(--fill);font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+.pill.pri{background:var(--acc);color:var(--accInk);font-weight:600}
+.plus{width:22px;height:22px;border-radius:50%;background:#fff;color:var(--acc);display:grid;place-items:center;font-weight:700;line-height:1}
+.status{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:6px;padding:0 16px 8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mute);flex:none}.dot.on{background:var(--ok)}
+/* full-width list (My Pieces) */
+.flist{border-top:1px solid var(--line)}
+.frow2,.shead{width:100%;display:flex;align-items:center;gap:16px;min-height:64px;padding:0 16px;background:var(--bg);border:0;border-bottom:1px solid var(--line);text-align:left;font-weight:700;font-size:21px}
+.frow2>svg:first-child,.shead .chev{width:26px;height:26px;flex:none;color:var(--ink)}
+.ft{flex:1}
+.cnt{min-width:48px;text-align:center;font-size:15px;font-weight:600;color:var(--mute);background:var(--fill);border-radius:999px;padding:4px 12px}
+.chev-r{width:12px;height:20px;color:var(--mute);flex:none}
+.shead .chev{transition:transform .15s}.shead[aria-expanded=false] .chev{transform:rotate(-90deg)}
+.srows{background:var(--card);border-bottom:1px solid var(--line)}
+.prow{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line);cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;min-height:76px}
+.prow:last-child{border-bottom:0}
+.prow.sel{background:color-mix(in srgb,var(--acc) 14%,var(--card))}
+.ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:14px;color:#fff;flex:none}
+.prow.sel .ck{background:var(--acc);border-color:var(--acc)}
+.thumb{width:56px;height:56px;border-radius:10px;overflow:hidden;background:var(--clay);display:grid;place-items:center;flex:none;position:relative}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.pinfo{flex:1;display:grid;gap:3px}
+.pt{font-weight:600;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:14px;color:var(--mute);display:flex;flex-wrap:wrap;gap:0 10px}.meta span{white-space:nowrap}
+.strip{display:flex;height:8px;border-radius:4px;overflow:hidden;max-width:220px;margin-top:2px}
+.strip i{display:block;height:100%}
+.badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--fill);white-space:nowrap}
+.badge.Sold,.badge.Gifted,.badge.Traded{color:var(--ok)}.badge.Available{color:var(--acc)}
+.empty{padding:56px 24px;text-align:center;display:grid;gap:16px;justify-items:center}
+.empty h2{font-size:22px}.empty p{margin:0;color:var(--mute);max-width:40ch}
+.bigbtn{min-height:56px;padding:0 48px;border-radius:999px;border:0;background:var(--acc);color:#fff;font-size:20px;font-weight:500}
+/* search */
+.sbar{background:light-dark(#f2f2f7,#1c1c1e);padding:12px 16px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:4}
+.sfield{display:flex;align-items:center;gap:8px;background:var(--fill);border-radius:12px;padding:0 12px;min-height:44px}
+.sfield svg{width:20px;height:20px;color:var(--mute);flex:none}
+.sfield input{flex:1;border:0;background:transparent;font-size:17px;min-height:44px;outline:none}
+.fchips{display:flex;gap:8px;overflow-x:auto;margin:12px -16px 0;padding:0 16px;scrollbar-width:none}
+.fchip{flex:none;min-height:40px;padding:0 12px;border-radius:12px;border:0;background:var(--fill);display:flex;align-items:center;gap:8px;font-size:16px;white-space:nowrap}
+.fchip.on{background:var(--acc);color:#fff}
+.fchip .tag{font-size:11px;font-weight:700;border:1.5px solid currentColor;border-radius:5px;padding:0 3px;opacity:.8}
+.fchip .car{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid currentColor;opacity:.8}
+.sum{padding:16px 16px 10px;display:grid;gap:2px}.sum b{font-size:18px}.sum span{color:var(--mute)}
+.sum button{border:0;background:none;color:var(--acc);padding:0;font-weight:600}
+.rlist{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+/* grouped lists (settings) */
+.gh{font-size:20px;font-weight:700;padding:26px 16px 10px}
+.gfoot{font-size:13px;color:var(--mute);padding:8px 32px 0}
+.group{background:var(--card);margin:0 16px;border-radius:12px;overflow:hidden}
+.grow{width:100%;display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 16px;background:none;border:0;text-align:left;position:relative}
+.grow+.grow::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:1px solid var(--line)}
+.grow .gt{flex:1;display:grid}.grow .gt small{color:var(--mute);font-size:14px}
+.grow .val{color:var(--mute)}
+.grow .ico{width:24px;height:24px;color:var(--ink);flex:none}
+.num{width:22px;color:var(--mute);text-align:center;flex:none}
+.info{width:30px;height:30px;border-radius:50%;border:2px solid var(--acc);color:var(--acc);display:grid;place-items:center;font-weight:700;font-family:Georgia,serif;font-size:16px;flex:none;background:none}
+.sw{width:22px;height:22px;border-radius:6px;flex:none;border:1px solid rgba(0,0,0,.15)}
+.subnav{position:sticky;top:0;z-index:4;background:var(--bg);border-bottom:1px solid var(--line);display:grid;grid-template-columns:90px 1fr 90px;align-items:center;min-height:54px;padding:0 8px}
+.subnav h2{font-size:18px;font-weight:600;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navb{border:0;background:none;color:var(--acc);font-size:17px;font-weight:600;min-height:44px;padding:0 8px;display:flex;align-items:center;gap:4px}
+.navb.r{justify-self:end}
+.intro{padding:20px 32px 4px;margin:0}
+.stedit{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center;padding:8px 12px}
+.stedit+.stedit{border-top:1px solid var(--line)}
+.panel{background:var(--card);margin:0 16px;border-radius:12px;padding:16px;display:grid;gap:12px}
+.big{font-size:44px;font-weight:700;line-height:1}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:13px;color:var(--mute);font-weight:600}
+td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.frow{display:grid;gap:3px;width:100%;text-align:left;background:none;border:0;padding:12px 16px;position:relative}
+.frow+.frow::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:1px solid var(--line)}
+.frow b{font-size:17px}
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.tab{min-height:60px;border:0;background:none;display:grid;justify-items:center;align-content:center;gap:3px;font-size:12px;font-weight:500;color:var(--mute)}
+.tab svg{width:28px;height:28px}
+.tab[aria-current=page]{color:var(--acc)}
+.bulkbar{position:fixed;left:0;right:0;bottom:calc(61px + env(safe-area-inset-bottom));z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px 12px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:0;background:var(--fill);font-weight:600;white-space:nowrap}
+.btn.pri{background:var(--acc);color:#fff}
+.btn.del{color:var(--danger)}
+.btn:disabled{opacity:.5}
+/* sheets */
+.sheet{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:10;display:none}
+.sheet.open{display:block}
+.sheetbar{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;justify-content:space-between;padding:6px 8px;min-height:54px}
+.sheetbar h2{font-size:18px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:center}
+.sheetbar>div{display:flex;gap:4px}
+.sbody{max-width:1000px;margin:0 auto;padding:16px 16px 80px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,320px);gap:22px;align-items:start}
+.sbody.one{grid-template-columns:minmax(0,1fr);max-width:720px}
+.col{display:grid;gap:18px}
+fieldset,.card{border:0;border-radius:14px;padding:16px;margin:0;background:var(--card);display:grid;gap:12px}
+legend{float:left;width:100%;font-weight:700;font-size:19px;padding:0;margin-bottom:4px}
+.card h3{font-size:19px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px}
+label{display:grid;gap:4px;font-size:14px;font-weight:500;color:var(--mute)}
+label small{font-weight:400}
+input[type=text],input[type=number],input[type=date],input:not([type]),select,textarea{min-height:44px;border:0;border-radius:10px;background:var(--fill);padding:8px 12px;font-size:16px;width:100%;color:var(--ink)}
+textarea{min-height:96px;resize:vertical}
+.hint{font-size:14px;color:var(--mute);margin:0}
+.layer,.logrow{border-radius:12px;padding:12px;display:grid;gap:10px;background:var(--bg)}
+.lhead{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.lnum{font-weight:600;font-size:15px;display:flex;gap:8px;align-items:center;color:var(--ink)}
+.lnum input[type=color]{width:34px;height:34px;padding:0;border:0;border-radius:8px;background:none}
+.lbtns{display:flex;gap:4px}
+.ib{width:40px;height:40px;border-radius:10px;border:0;background:var(--fill);font-size:16px;display:grid;place-items:center}
+.ib:disabled{opacity:.35}
+.coats{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.coats output{min-width:2ch;text-align:center;font-weight:600;font-size:18px}
+.addrow{display:flex;flex-wrap:wrap;gap:8px}
+.lr-h{display:flex;gap:10px;align-items:center;justify-content:space-between}.lr-h input{max-width:180px}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.photos figure{margin:0;position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--clay)}
+.photos img{width:100%;height:100%;object-fit:cover}
+.photos button{position:absolute;top:4px;right:4px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff}
+.addph{aspect-ratio:1;border:2px dashed var(--line);border-radius:10px;display:grid;place-items:center;text-align:center;font-size:13px;cursor:pointer;padding:6px;position:relative}
+.addph input{position:absolute;width:1px;height:1px;opacity:0}
+.side{position:sticky;top:70px;display:grid;gap:14px}
+.xsec{width:100%;height:auto;display:block;border-radius:10px}
+.carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;border-radius:14px}
+.carousel figure{flex:0 0 100%;margin:0;scroll-snap-align:center;aspect-ratio:1/1;background:var(--fill);border-radius:14px;overflow:hidden;position:relative;display:grid;place-items:center}
+.carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.carnav{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;color:var(--mute)}
+.stepper{list-style:none;margin:0;padding:4px 0 8px;display:flex;overflow-x:auto}
+.stepper li{flex:1 0 88px;display:grid;justify-items:center;text-align:center;gap:4px;position:relative;font-size:12px;color:var(--mute)}
+.stepper li::before{content:"";position:absolute;top:8px;left:-50%;right:50%;height:2px;background:var(--line)}
+.stepper li:first-child::before{display:none}
+.stepper li.done::before,.stepper li.cur::before{background:var(--acc)}
+.stepper .sd{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);background:var(--card);position:relative;z-index:1}
+.stepper li.done .sd{background:var(--acc);border-color:var(--acc)}
+.stepper li.cur .sd{border-color:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 25%,transparent)}
+.stepper li.cur{color:var(--ink);font-weight:600}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px 16px;margin:0}
+.facts div{display:grid;gap:1px}.facts dt{font-size:13px;color:var(--mute)}.facts dd{margin:0;font-weight:500}
+.llist{display:grid;gap:10px}
+.litem{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start}
+.litem .sw{width:14px;height:14px;border-radius:4px;margin-top:4px}
+.litem small{display:block;color:var(--mute);font-size:14px}
+.pick{display:grid;gap:2px;max-height:340px;overflow-y:auto;border-radius:12px;padding:6px;background:var(--bg)}
+.pick label{display:flex;gap:10px;align-items:center;font-weight:500;min-height:42px;color:var(--ink);font-size:16px}
+.pick input{width:20px;height:20px;flex:none}
+.pick small{color:var(--mute);font-weight:400}
+.cbx{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important}
+.cbx input{width:20px;height:20px}
+.mini{display:flex;flex-wrap:wrap;gap:6px}
+.mini button{width:56px;height:56px;border-radius:8px;overflow:hidden;border:0;padding:0;background:var(--clay)}
+.mini button{position:relative}.mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.banner{background:var(--card);margin:8px 16px;border-radius:12px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;font-size:15px}
+/* modal */
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:end;justify-content:center;padding:10px}
+.modal.open{display:flex}
+.mbox{background:var(--card);border-radius:18px;padding:18px;width:min(520px,100%);max-height:88vh;overflow-y:auto;display:grid;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.mbox h3{font-size:20px}
+.mact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.qa{display:grid;gap:2px;background:var(--bg);border-radius:12px;overflow:hidden}
+.qa>button{min-height:50px;border:0;background:var(--bg);text-align:left;padding:0 16px;font-weight:500;font-size:17px}
+.qa>button+button{border-top:1px solid var(--line)}
+.qa>button.del{color:var(--danger)}
+.qa>button.on{color:var(--acc);font-weight:700}
+.qa .inl{display:flex;gap:6px;padding:6px}.qa .inl select{flex:1}
+.show{display:grid;gap:12px}
+.show img{width:100%;border-radius:14px;display:block}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;z-index:30;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
+.toast.on{opacity:1}
+/* editor */
+.tinput{flex:1;min-width:0;border:0;background:transparent;text-align:center;font-size:19px;font-weight:700;color:var(--ink);padding:6px;border-radius:10px}
+.tinput::placeholder{color:var(--ink);opacity:1}.tinput:focus{background:var(--fill);outline:none}
+.savepill{min-height:42px;padding:0 20px;border-radius:999px;border:0;background:var(--acc);color:#fff;font-weight:700;font-size:17px}
+.ebody{max-width:720px;margin:0 auto;padding:16px 16px 90px}
+.phrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.phtile{flex:none;width:150px;height:190px;border-radius:24px;overflow:hidden;background:var(--card);margin:0;position:relative;display:grid;place-items:center}
+.phtile.add{align-content:center;justify-items:center;gap:12px;cursor:pointer;color:var(--ink);font-size:17px}
+.phtile input{position:absolute;width:1px;height:1px;opacity:0}
+.camc{width:88px;height:88px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--acc)}.camc svg{width:36px;height:36px}
+.phtile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.phtile button{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff}
+.scard{background:var(--card);border-radius:24px;margin-top:16px;overflow:hidden}
+.scrow{width:100%;display:flex;align-items:center;gap:14px;min-height:62px;padding:10px 18px;background:none;border:0;text-align:left;position:relative;font-size:18px;color:var(--ink)}
+.scrow+.scrow::before{content:"";position:absolute;top:0;left:62px;right:0;border-top:1px solid var(--line)}
+.scrow.top{min-height:84px}.scrow.top+.scrow::before{left:0}
+.scrow .gt{flex:1;display:block}.scrow small{display:block;font-size:15px;color:var(--mute)}.scrow b{display:block;font-size:24px}
+.okc{width:42px;height:42px;border-radius:50%;background:#0a84ff;display:grid;place-items:center;flex:none}
+.ic{width:30px;display:grid;place-items:center;flex:none;color:var(--ink)}.ic svg{width:24px;height:24px}
+.udi{color:var(--ink);display:grid;place-items:center}
+.overlay{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;min-height:0;padding:0}
+.mute{color:var(--mute)}
+.eh{font-size:26px;font-weight:700;padding:30px 0 12px;border-bottom:1px solid var(--line);list-style:none}
+details.earlier summary::-webkit-details-marker{display:none}
+details.earlier[open] summary{margin-bottom:12px}
+.elist{display:grid}
+.erow{width:100%;display:flex;align-items:center;gap:14px;min-height:62px;padding:8px 2px;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;font-size:18px;color:var(--ink);position:relative}
+.erow .gt{flex:1;display:grid}.erow .gt small{font-size:14px;color:var(--mute)}
+.ev{color:var(--ink);text-align:right;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ev.none{color:var(--mute)}
+.pricein{width:120px!important;flex:none;text-align:right;background:transparent!important;font-size:18px!important;padding:0!important}
+.dchips{display:flex;gap:10px;overflow-x:auto;padding-top:12px;scrollbar-width:none}
+.dchip{flex:none;min-height:46px;padding:0 18px;border-radius:14px;border:0;background:var(--card);color:var(--acc);font-size:18px;font-weight:500}
+.namer{margin-top:12px;display:grid;gap:10px}
+.aibtn{justify-self:start;min-height:44px;padding:0 16px;border-radius:999px;border:0;background:var(--card);color:var(--acc);font-weight:600;font-size:16px;display:flex;align-items:center;gap:8px}.aibtn:disabled{opacity:.6}
+.aichips{display:flex;flex-wrap:wrap;gap:8px}
+.aichip{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px}.aichip.more{color:var(--acc)}
+.phtile img{cursor:pointer}
+.phcol{flex:none;width:150px;display:grid;gap:6px}
+.phst{min-height:38px!important;padding:4px 10px!important;font-size:15px!important;background:var(--card)!important;border-radius:10px!important;text-align:center}
+.phcap{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.62);color:#fff;font-size:14px;font-weight:600;padding:5px 12px;border-radius:999px;line-height:1.2}
+.cropb{top:auto!important;right:auto!important;bottom:8px;left:8px;width:auto!important;height:32px!important;border-radius:999px!important;padding:0 10px;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600}
+.cropwrap{position:relative;overflow:hidden;border-radius:10px;user-select:none;-webkit-user-select:none;touch-action:none;justify-self:center;line-height:0}
+.cropwrap img{display:block;max-width:100%;max-height:58vh;width:auto;height:auto;pointer-events:none}
+.cropbox{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,.55);outline:2px solid #fff;cursor:move;touch-action:none}
+.cg{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,transparent 33.2%,rgba(255,255,255,.45) 33.3%,rgba(255,255,255,.45) 33.6%,transparent 33.7%,transparent 66.4%,rgba(255,255,255,.45) 66.5%,rgba(255,255,255,.45) 66.8%,transparent 66.9%),linear-gradient(to bottom,transparent 33.2%,rgba(255,255,255,.45) 33.3%,rgba(255,255,255,.45) 33.6%,transparent 33.7%,transparent 66.4%,rgba(255,255,255,.45) 66.5%,rgba(255,255,255,.45) 66.8%,transparent 66.9%)}
+.ch{position:absolute;width:34px;height:34px;touch-action:none}
+.ch::after{content:"";position:absolute;width:18px;height:18px;border:4px solid #fff}
+.ch.nw{left:-6px;top:-6px;cursor:nwse-resize}.ch.nw::after{left:4px;top:4px;border-right:0;border-bottom:0}
+.ch.ne{right:-6px;top:-6px;cursor:nesw-resize}.ch.ne::after{right:4px;top:4px;border-left:0;border-bottom:0}
+.ch.sw{left:-6px;bottom:-6px;cursor:nesw-resize}.ch.sw::after{left:4px;bottom:4px;border-right:0;border-top:0}
+.ch.se{right:-6px;bottom:-6px;cursor:nwse-resize}.ch.se::after{right:4px;bottom:4px;border-left:0;border-top:0}
+.cropar{justify-self:center;max-width:100%;overflow-x:auto}.cropar button{padding:0 12px}
+.notes{margin-top:14px;min-height:150px!important;background:var(--card)!important;border-radius:14px!important}
+.qa>button[hidden]{display:none}
+.ebody .layer{background:var(--card)}
+@media(min-width:700px){.modal{align-items:center}}
+@media(max-width:820px){.sbody{grid-template-columns:minmax(0,1fr)}.side{position:static}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+input[type=email],input[type=password]{min-height:44px;border:0;border-radius:10px;background:var(--fill);padding:8px 12px;font-size:16px;width:100%}
+.auth{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;overflow:auto}
+.auth.on{display:block}
+.auth .box{max-width:420px;margin:0 auto;padding:max(48px,env(safe-area-inset-top)) 16px 40px;display:grid;gap:16px}
+.auth h1{font-size:34px;margin:0;text-align:center}
+.auth .sub{color:var(--mute);text-align:center;margin:-8px 0 8px}
+.auth .panel{margin:0}
+.auth .lnk{background:none;border:0;color:var(--acc);font-weight:600;padding:8px;min-height:44px}
+.auth .err{color:var(--danger);font-size:14px;min-height:1em}
+.auth .msg{color:var(--ok);font-size:14px}
+.auth .row2{display:flex;justify-content:space-between;flex-wrap:wrap}
+.auth .box>div:first-child{text-align:center}
+</style>
+</head>
+<body>
+<div class="auth" id="auth" role="dialog" aria-labelledby="authTitle"><div class="box" id="authBox"></div></div>
+<main id="main"></main>
+
+<div class="bulkbar" id="bulkbar" hidden>
+  <span id="bulkCount">0 selected</span>
+  <button class="btn" data-act="bulk" data-id="stage">Stage</button>
+  <button class="btn" data-act="bulk" data-id="status">Status</button>
+  <button class="btn" data-act="bulk" data-id="location">Location</button>
+  <button class="btn pri" data-act="selmode">Done</button>
+</div>
+
+<nav class="tabbar" aria-label="Sections">
+  <button class="tab" data-act="tab" data-id="pieces"><svg viewBox="0 0 28 28" fill="currentColor"><rect x="7" y="3.5" width="14" height="2" rx="1"/><rect x="5.5" y="6.5" width="17" height="2" rx="1"/><rect x="3.5" y="9.5" width="21" height="15" rx="3.5"/><rect x="7" y="14" width="8" height="2" rx="1" fill="var(--card)"/><rect x="7" y="18" width="6" height="2" rx="1" fill="var(--card)"/><circle cx="20" cy="16.5" r="2.4" fill="var(--card)"/></svg>My Pieces</button>
+  <button class="tab" data-act="tab" data-id="search"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12.5" cy="12.5" r="7.5"/><path d="M18 18l6 6"/></svg>Search</button>
+  <button class="tab" data-act="tab" data-id="settings"><svg viewBox="0 0 28 28" fill="currentColor"><path d="M12 3h4l.7 3.1 2 .9 2.8-1.7 2.8 2.8-1.7 2.8.9 2 3.1.7v4l-3.1.7-.9 2 1.7 2.8-2.8 2.8-2.8-1.7-2 .9L16 25h-4l-.7-3.1-2-.9-2.8 1.7-2.8-2.8 1.7-2.8-.9-2L1.4 16v-4l3.1-.7.9-2-1.7-2.8 2.8-2.8 2.8 1.7 2-.9z"/><circle cx="14" cy="14" r="4" fill="var(--card)"/></svg>Settings</button>
+</nav>
+
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheetbar" id="sheetBar"></div>
+  <div id="sheetBody"></div>
+</section>
+<div class="modal" id="modal"><div class="mbox" id="modalBody" role="dialog" aria-modal="true"></div></div>
+<div id="dls"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const num=v=>v===''||v==null||isNaN(+v)?null:+v;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const isHex=c=>/^#[0-9a-f]{6}$/i.test(c||'');
+const safeSrc=s=>{s=String(s||'');return /^(data:image\/|blob:|https:\/\/|\/_blob\/)/.test(s)?s:''};
+const fmtDate=s=>{if(!s)return'';const d=new Date(s+'T12:00');return isNaN(d)?s:d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})};
+const CHEV='<svg class="chev-r" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7 7-7 7"/></svg>';
+const CHEVD='<svg class="chev" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l7 7 7-7"/></svg>';
+const ARCH='<svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3" y="4" width="20" height="5" rx="1.5"/><path d="M5 9v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h6"/></svg>';
+const SRCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg>';
+
+const KINDS=[['glaze','Glaze','#5f8f86','GL'],['underglaze','Underglaze','#2447b3','UG'],['slip','Slip','#e6d6c0','SL'],['oxide','Oxide','#6b3a22','OX'],['stain','Stain','#9b4f8f','ST']];
+const KC=Object.fromEntries(KINDS.map(k=>[k[0],k]));
+const CATS=[['clay','Clay Bodies'],['form','Forms'],['forming','Forming Methods'],['glaze','Glazes'],['location','Locations'],['oxide','Oxides'],['slip','Slips'],['underglaze','Underglazes'],['stain','Stains'],['area','Surface Areas'],['method','Application Methods']];
+const CATN=Object.fromEntries(CATS);
+const STATUSES=['Not for sale','Available','Sold','Gifted','Traded','Archived'];
+const FTYPES=['Bisque','Glaze','Raku','Pit / smoke','Other'];
+const mk=a=>a.map(n=>({id:uid(),name:n}));
+const NEW_STAGES=['Idea','Formed','Trimmed','Bisqued','Glazed','Finished'];
+function defaults(){return{cur:'HUF',wUnit:'g',dUnit:'cm',stages:[...NEW_STAGES],lib:{glaze:[],underglaze:[],slip:[],oxide:[],stain:[],
+  clay:mk(['Stoneware','Grogged stoneware','Porcelain','Earthenware','Terracotta']),
+  form:mk(['Bowl','Coffee cup','Jar','Moon jar','Mug','Planter','Plate','Platter','Tea cup','Test tile','Urn','Vase']),
+  forming:mk(['Coiled','Mold formed','Pinched','Slab built','Slip cast','Thrown and altered','Wheel thrown']),
+  location:mk(['Bisque shelf','Damp room','Glaze shelf','Home','Kiln','My cubby']),
+  area:mk(['All over','Inside','Outside','Rim']),
+  method:mk(['Brushed','Bubble glazed','Dipped','Poured','Sponged','Sprayed'])}}}
+/* lists that were my earlier defaults: swap them for the new ones if never edited */
+const OLDDEF={stages:['Idea','Formed','Trimmed','Bone dry','Bisque fired','Glazed','Glaze fired','Finished'],form:['Mug','Cup','Bowl','Plate','Vase','Jar','Teapot','Planter','Test tile'],forming:['Wheel-thrown','Pinch','Coil','Slab','Mould','Mixed'],location:['Damp room','Drying shelf','Bisque shelf','Glaze shelf','Kiln','Home'],area:['All over','Outside','Inside','Rim','Foot','Decoration'],method:['Dipped','Brushed','Poured','Sprayed','Sponged','Trailed']};
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function fixSettings(s){const d=defaults();s=s&&typeof s==='object'?s:{};
+  const o={cur:String(s.cur||'HUF').slice(0,6),wUnit:s.wUnit==='oz'||s.units==='us'?'oz':'g',dUnit:s.dUnit==='in'||s.units==='us'?'in':'cm',stages:Array.isArray(s.stages)&&s.stages.length?s.stages.map(String):d.stages,lib:{}};
+  if(same(o.stages,OLDDEF.stages))o.stages=d.stages;
+  for(const [c] of CATS){o.lib[c]=Array.isArray(s.lib&&s.lib[c])?s.lib[c].filter(x=>x&&x.name).map(x=>({...x,id:String(x.id||uid()),name:String(x.name)})):d.lib[c];
+    if(OLDDEF[c]&&same(o.lib[c].map(x=>x.name),OLDDEF[c]))o.lib[c]=d.lib[c]}
+  return o}
+const STAGEMAP={'Wet':'Formed','Leather hard':'Formed','Bone dry':'Trimmed','Bisque fired':'Bisqued','Glaze fired':'Glazed'};
+const OLDKIND={'Glaze':'glaze','Underglaze':'underglaze','Slip / engobe':'slip','Oxide / stain':'oxide','Wax resist':'glaze'};
+function normPiece(p){
+  p={...p};p.id=String(p.id);p.title=String(p.title||'Untitled piece');
+  p.layers=(Array.isArray(p.layers)?p.layers:[]).map(l=>{l={...l};if(OLDKIND[l.kind]){if(l.kind==='Wax resist')l.note=('Wax resist '+(l.note||'')).trim();l.kind=OLDKIND[l.kind]}if(!KC[l.kind])l.kind='glaze';if(l.where&&!l.area)l.area=l.where;l.coats=Math.max(1,+l.coats||1);l.id=l.id||uid();if(!isHex(l.color))l.color=KC[l.kind][2];return l});
+  p.photos=Array.isArray(p.photos)?p.photos.filter(x=>x&&safeSrc(x.src)):[];
+  if(!p.log||typeof p.log!=='object'){p.log={};
+    if(p.date||num(p.w1)!=null)p.log['Formed']={date:p.date||'',weight:num(p.w1)};
+    if(num(p.w2)!=null)p.log['Trimmed']={weight:num(p.w2)};
+    if(num(p.w3)!=null)p.log['Glazed']={weight:num(p.w3)};
+    if(p.bisque||p.gfire)p.notes=[p.notes,p.bisque?'Bisque: '+p.bisque:'',p.gfire?'Glaze firing: '+p.gfire:''].filter(Boolean).join('\n');
+    ['date','w1','w2','w3','bisque','gfire'].forEach(k=>delete p[k])}
+  const st=S.settings.stages;
+  const up=n=>STAGEMAP[n]&&!st.includes(n)&&st.includes(STAGEMAP[n])?STAGEMAP[n]:n;
+  p.stage=up(p.stage||'Formed');
+  for(const k of Object.keys(p.log)){const n=up(k);if(n!==k){p.log[n]={...(p.log[n]||{}),...p.log[k]};delete p.log[k]}}
+  p.status=STATUSES.includes(p.status)?p.status:'Not for sale';p.created=+p.created||Date.now();
+  return p}
+
+const LS='pottery-log.';
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(LS+k);return v?JSON.parse(v):d}catch(e){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(LS+k,JSON.stringify(v));return true}catch(e){return false}};
+const lsDel=k=>{try{localStorage.removeItem(LS+k)}catch(e){}};
+
+let S={pieces:[],firings:[],settings:fixSettings(null)};
+let db=null,assets=null,cloud=false,statusTxt='Connecting…',userEmail='';
+let view=lsGet('view','pieces');if(!['pieces','search','settings'].includes(view))view='pieces';
+let page=null,stEdit=false,pickKey=null;
+let q='',sortBy='new';
+const FKEYS=['arch','stage','status','glaze','underglaze','slip','oxide','stain','location','clay','form','forming'];
+let flt=Object.fromEntries(FKEYS.map(k=>[k,'']));
+let collapsed=new Set(lsGet('collapsed',[]));
+let selectMode=false,sel=new Set(),matCat='glaze';
+let sheet=null,ed=null,fe=null,isNew=false,busy=false,removedAssets=[],armed=null,suppress=false;
+
+/* units */
+const WU=()=>S.settings.wUnit==='oz',DU=()=>S.settings.dUnit==='in';
+const wu=()=>WU()?'oz':'g',lu=()=>DU()?'in':'cm';
+const fw=g=>g==null?'—':WU()?(g/28.3495).toFixed(1)+' oz':Math.round(g)+' g';
+const fl=c=>c==null?'—':DU()?(c/2.54).toFixed(1)+' in':(Math.round(c*10)/10)+' cm';
+const inW=v=>{v=num(v);return v==null?null:WU()?v*28.3495:v};
+const inL=v=>{v=num(v);return v==null?null:DU()?v*2.54:v};
+const outW=g=>g==null?'':WU()?+(g/28.3495).toFixed(2):Math.round(g*10)/10;
+const outL=c=>c==null?'':DU()?+(c/2.54).toFixed(2):Math.round(c*10)/10;
+
+/* helpers */
+const stages=()=>S.settings.stages;
+const lib=c=>S.settings.lib[c]||[];
+const libNames=c=>lib(c).filter(x=>!x.hidden).map(x=>x.name);
+const opts=(list,cur,empty)=>(empty!=null?`<option value="">${esc(empty)}</option>`:'')+list.map(v=>{const [val,lab]=Array.isArray(v)?v:[v,v];return `<option value="${esc(val)}" ${val===cur?'selected':''}>${esc(lab)}</option>`}).join('');
+const libColor=(kind,name)=>{const it=lib(kind).find(x=>x.name.toLowerCase()===String(name||'').toLowerCase());return it&&isHex(it.color)?it.color:null};
+function ordered(p){const st=stages();return Object.keys(p.log||{}).sort((a,b)=>{const ia=st.indexOf(a),ib=st.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)})}
+function lastVal(p,k){const o=ordered(p);for(let i=o.length-1;i>=0;i--){const v=num(p.log[o[i]]&&p.log[o[i]][k]);if(v!=null)return v}return null}
+function firstVal(p,k){for(const s of ordered(p)){const v=num(p.log[s]&&p.log[s][k]);if(v!=null)return v}return null}
+function shrinkPct(p){const pts=ordered(p).map(s=>num(p.log[s].h)??num(p.log[s].w)).filter(v=>v!=null);if(pts.length<2||!pts[0])return null;return (1-pts[pts.length-1]/pts[0])*100}
+function lossPct(p){const a=firstVal(p,'weight'),b=lastVal(p,'weight');return a&&b!=null&&a!==b?(1-b/a)*100:null}
+function stIdx(s){const i=stages().indexOf(s);return i<0?-1:i}
+function photosByStage(p){return p.photos.map((x,i)=>({x,i})).sort((a,b)=>stIdx(a.x.stage)-stIdx(b.x.stage)||a.i-b.i).map(o=>o.x)}
+function coverPhoto(p){const ps=photosByStage(p);return ps.length?ps[ps.length-1]:null}
+function stageDate(p){return (p.log[p.stage]&&p.log[p.stage].date)||''}
+function strip(L){if(!L||!L.length)return '';const t=L.reduce((a,l)=>a+(+l.coats||1),0);return '<div class="strip">'+L.map(l=>`<i style="width:${((+l.coats||1)/t*100).toFixed(2)}%;background:${isHex(l.color)?l.color:'#999'}"></i>`).join('')+'</div>'}
+const pot=(s=30)=>`<svg width="${s}" height="${s}" viewBox="0 0 64 64" aria-hidden="true"><path d="M18 14h28l-3 6c6 6 7 18 3 28-2 5-6 8-14 8s-12-3-14-8c-4-10-3-22 3-28z" fill="rgba(255,255,255,.45)"/></svg>`;
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2600)}
+function setStatus(on,t){statusTxt=t;S.on=on;const d=$('#stTxt');if(d){d.textContent=t;$('#stDot').classList.toggle('on',on)}}
+function xsecSvg(L,clay){
+  const unit=16,W=340,clayH=56,H=Math.max(150,clayH+24+L.reduce((a,l)=>a+(+l.coats||1),0)*unit);
+  let y=H-clayH,o=`<svg class="xsec" viewBox="0 0 ${W} ${H}" role="img" aria-label="Layer cross-section"><defs><pattern id="grog" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r="1" fill="rgba(0,0,0,.18)"/><circle cx="7" cy="7" r=".8" fill="rgba(255,255,255,.22)"/></pattern></defs><rect width="${W}" height="${H}" fill="var(--bg)"/>`;
+  o+=`<rect x="0" y="${y}" width="${W}" height="${clayH}" fill="var(--clay)"/><rect x="0" y="${y}" width="${W}" height="${clayH}" fill="url(#grog)"/><text x="12" y="${H-14}" font-size="13" fill="#fff" font-weight="600">${esc(clay||'Clay body')}</text>`;
+  L.forEach(l=>{const c=+l.coats||1,h=unit*c,col=isHex(l.color)?l.color:'#999';y-=h;
+    o+=`<rect x="0" y="${y}" width="${W}" height="${h}" fill="${col}"/><line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="rgba(0,0,0,.25)"/>`;
+    for(let k=1;k<c;k++)o+=`<line x1="0" x2="${W}" y1="${y+unit*k}" y2="${y+unit*k}" stroke="rgba(255,255,255,.4)" stroke-dasharray="3 4"/>`;
+    const lum=parseInt(col.slice(1,3),16)*.3+parseInt(col.slice(3,5),16)*.59+parseInt(col.slice(5,7),16)*.11;
+    o+=`<text x="12" y="${y+Math.min(h,unit)/2+4}" font-size="12" font-weight="600" fill="${lum>140?'#222':'#fff'}">${esc(c+'× '+(l.name||KC[l.kind][1]))}${l.area?' · '+esc(l.area):''}</text>`});
+  if(!L.length)o+=`<text x="${W/2}" y="${(H-clayH)/2+4}" text-anchor="middle" font-size="13" fill="var(--mute)">No decoration layers yet</text>`;
+  return o+'</svg>'}
+
+/* storage */
+async function putPiece(p){const prev=S.pieces;const i=prev.findIndex(x=>x.id===p.id);S.pieces=i>=0?prev.map(x=>x.id===p.id?p:x):[...prev,p];
+  if(cloud){try{await db.collection('pieces').doc(p.id).set(p)}catch(e){S.pieces=prev;throw e}}else if(!lsSet('pieces',S.pieces)){S.pieces=prev;throw new Error('full')}}
+async function delPiece(id){const prev=S.pieces;S.pieces=prev.filter(x=>x.id!==id);if(cloud){try{await db.collection('pieces').doc(id).delete()}catch(e){S.pieces=prev;throw e}}else lsSet('pieces',S.pieces)}
+async function putFiring(f){const prev=S.firings;const i=prev.findIndex(x=>x.id===f.id);S.firings=i>=0?prev.map(x=>x.id===f.id?f:x):[...prev,f];
+  if(cloud){try{await db.collection('firings').doc(f.id).set(f)}catch(e){S.firings=prev;throw e}}else if(!lsSet('firings',S.firings)){S.firings=prev;throw new Error('full')}}
+async function delFiring(id){S.firings=S.firings.filter(x=>x.id!==id);if(cloud)await db.collection('firings').doc(id).delete();else lsSet('firings',S.firings)}
+async function putSettings(s){S.settings=s;if(cloud)await db.doc('meta/settings').set(s);else lsSet('settings',s)}
+function saveErr(e){toast(e&&e.message==='full'?'This browser is out of space. Remove photos or move pieces to your account.':e&&e.code==='quota_exceeded'?'Your storage for this log is full.':'Could not save. Try again.')}
+
+/* photos */
+function shrinkImg(file,max){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();
+  img.onload=()=>{const s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>b?res(b):rej(new Error('encode')),'image/jpeg',max>1100?.84:.72)};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('read'))};img.src=url})}
+const blobToData=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
+function dataToBlob(d){const [h,b]=d.split(',');const bin=atob(b);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:(h.match(/data:([^;]+)/)||[])[1]||'image/jpeg'})}
+async function storePhoto(blob){if(cloud&&assets){const r=await assets.upload(blob);return{aid:r.id,src:r.url||('/_blob/'+r.id)}}return{src:await blobToData(blob)}}
+
+/* ---------- views ---------- */
+function render(){
+  const ae=document.activeElement,aid=ae&&ae.id,pos=ae&&ae.selectionStart;
+  $$('.tab').forEach(b=>b.setAttribute('aria-current',b.dataset.id===view?'page':'false'));
+  $('#main').innerHTML=page?vPage():view==='pieces'?vPieces():view==='search'?vSearch():vSettings();
+  $('#bulkbar').hidden=!(view==='pieces'&&!page&&selectMode);$('#bulkCount').textContent=sel.size+' selected';
+  fillDatalists();if(page&&page.k==='shrink')calc();
+  if(sheet&&sheet.mode==='detail')renderDetail();
+  if(aid&&$('#'+aid)&&$('#main').contains($('#'+aid))){const el=$('#'+aid);el.focus({preventScroll:true});try{if(pos!=null)el.setSelectionRange(pos,pos)}catch(e){}}
+}
+function fillDatalists(){$('#dls').innerHTML=['form','forming','clay','location',...KINDS.map(k=>k[0])].map(c=>`<datalist id="dl_${c}">${libNames(c).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`).join('')}
+function banner(){const lp=lsGet('pieces',[]),lf=lsGet('firings',[]);if(!cloud||!(lp.length||lf.length))return '';
+  return `<div class="banner"><span>${lp.length} piece${lp.length===1?'':'s'} and ${lf.length} firing${lf.length===1?'':'s'} are saved only on this device.</span><button class="btn" data-act="migrate">Move to my account</button></div>`}
+function prow(p){
+  const ph=coverPhoto(p),src=ph&&safeSrc(ph.src),w=lastVal(p,'weight');
+  return `<div class="prow ${sel.has(p.id)?'sel':''}" data-act="open" data-id="${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(p.title)}">
+   ${selectMode?`<span class="ck">${sel.has(p.id)?'✓':''}</span>`:''}
+   <div class="thumb">${src?`<img src="${esc(src)}" alt="" loading="lazy">`:pot()}</div>
+   <div class="pinfo"><div class="pt">${esc(p.title)}</div>
+    <div class="meta">${[p.form,p.clay,w!=null?fw(w):'',p.location].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}</div>${strip(p.layers)}</div>
+   ${p.status!=='Not for sale'?`<span class="badge ${esc(p.status)}">${esc(p.status)}</span>`:''}${selectMode?'':CHEV}</div>`}
+const byNew=(a,b)=>b.created-a.created;
+
+function vPieces(){
+  const act=S.pieces.filter(p=>p.status!=='Archived'),arch=S.pieces.length-act.length,st=stages();
+  const sec=(s,ps)=>{const c=collapsed.has(s);return `<button class="shead" data-act="toggle" data-id="${esc(s)}" aria-expanded="${!c}">${CHEVD}<span class="ft">${esc(s)}</span><span class="cnt">${ps.length}</span></button>${!c&&ps.length?`<div class="srows">${ps.sort(byNew).map(prow).join('')}</div>`:''}`};
+  const other=act.filter(p=>!st.includes(p.stage));
+  return `<div class="lt"><div class="ltbar"><button class="pill" data-act="selmode">${selectMode?'Done':'Edit'}</button><button class="pill pri" data-act="newpiece">New <span class="plus">+</span></button></div><h1>My Pieces</h1></div>
+   <div class="status"><span class="dot ${S.on?'on':''}" id="stDot"></span><span id="stTxt">${esc(statusTxt)}</span></div>${banner()}
+   <div class="flist"><button class="frow2" data-act="page" data-id="archived">${ARCH}<span class="ft">Archived</span>${arch?`<span class="cnt">${arch}</span>`:''}${CHEV}</button>
+   ${st.map(s=>sec(s,act.filter(p=>p.stage===s))).join('')}${other.length?sec('Other',other):''}</div>
+   ${!S.pieces.length?`<div class="empty"><p>Tap <b>New</b> to log your first piece: photos, weight, and every glaze layer with its coats.</p></div>`:''}`}
+
+const FCHIPS=[['arch','',''],['stage','Stage','☑'],['status','Status','○'],['glaze','Glaze','GL'],['underglaze','Underglaze','UG'],['slip','Slip','SL'],['oxide','Oxide','OX'],['stain','Stain','ST'],['location','Location','⌖'],['clay','Clay body','CB'],['form','Form','FO'],['forming','Forming method','FM']];
+const ARCHO=[['','Active pieces'],['archived','Archived only'],['all','All pieces']];
+const SORTO=[['new','Newest first'],['old','Oldest first'],['title','Title A–Z'],['loc','By location']];
+function vSearch(){
+  return `<div class="sbar"><div class="sfield">${SRCH}<input id="q" type="search" placeholder="Search" value="${esc(q)}" aria-label="Search pieces"></div>
+   <div class="fchips" role="toolbar" aria-label="Filters">${FCHIPS.map(([k,l,t])=>{const v=flt[k];const on=!!v;
+     const lab=k==='arch'?ARCHO.find(x=>x[0]===v)[1]:(v||l);
+     return `<button class="fchip ${on?'on':''}" data-act="chip" data-id="${k}">${k==='arch'?`<span style="width:20px;height:20px;display:inline-grid">${ARCH}</span>`:`<span class="tag">${esc(t)}</span>`}${esc(lab)}<span class="car"></span></button>`}).join('')}
+    <button class="fchip ${sortBy!=='new'?'on':''}" data-act="chip" data-id="sort"><span class="tag">↕</span>${esc(SORTO.find(x=>x[0]===sortBy)[1])}<span class="car"></span></button></div></div>
+   <div id="res">${sResults()}</div>`}
+function smatch(p){
+  if(flt.arch===''&&p.status==='Archived')return false;
+  if(flt.arch==='archived'&&p.status!=='Archived')return false;
+  for(const k of ['stage','status','clay','form','forming','location'])if(flt[k]&&p[k]!==flt[k])return false;
+  for(const k of KINDS.map(x=>x[0]))if(flt[k]&&!p.layers.some(l=>l.kind===k&&l.name===flt[k]))return false;
+  if(q){const hay=[p.title,p.clay,p.form,p.forming,p.location,p.status,p.stage,p.notes,p.price,...p.layers.map(l=>l.name+' '+(l.note||'')+' '+(l.method||'')+' '+(l.area||''))].join(' ').toLowerCase();if(!q.split(/\s+/).every(w=>hay.includes(w)))return false}
+  return true}
+function sorter(a,b){return sortBy==='old'?a.created-b.created:sortBy==='title'?a.title.localeCompare(b.title):sortBy==='loc'?(a.location||'~').localeCompare(b.location||'~')||a.title.localeCompare(b.title):b.created-a.created}
+function sResults(){
+  const nf=FKEYS.filter(k=>flt[k]).length+(q?1:0);
+  const list=S.pieces.filter(smatch).sort(sorter);
+  const head=`<div class="sum"><b>${nf?'Matching pieces':'All pieces'}: ${list.length}</b><span>${nf?`${nf} filter${nf>1?'s':''} applied · <button data-act="clearflt">Clear</button>`:'No filters applied'}</span></div>`;
+  if(!S.pieces.length)return head+`<div class="empty">${pot(64)}<h2>No pieces to search through yet</h2><button class="bigbtn" data-act="newpiece">Create Piece</button></div>`;
+  if(!list.length)return head+'<div class="empty"><p>No pieces match these filters.</p></div>';
+  return head+`<div class="rlist">${list.map(prow).join('')}</div>`}
+function chipOptions(k){
+  if(k==='arch')return ARCHO;if(k==='sort')return SORTO;
+  if(k==='stage')return [['','Any'],...stages().map(s=>[s,s])];
+  if(k==='status')return [['','Any'],...STATUSES.filter(s=>s!=='Archived').map(s=>[s,s])];
+  const used=KC[k]?S.pieces.flatMap(p=>p.layers.filter(l=>l.kind===k).map(l=>l.name)):S.pieces.map(p=>p[k]);
+  const names=[...new Set([...libNames(k),...used].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return [['','Any'],...names.map(n=>[n,n])]}
+
+function grow(act,id,label,right='',sub=''){return `<button class="grow" data-act="${act}" data-id="${esc(id)}"><span class="gt">${label}${sub?`<small>${sub}</small>`:''}</span>${right}${CHEV}</button>`}
+function vSettings(){
+  const c=n=>`<span class="cnt">${n}</span>`;
+  return `<div class="lt"><h1>Settings</h1></div><div class="status"><span class="dot ${S.on?'on':''}" id="stDot"></span><span id="stTxt">${esc(statusTxt)}</span></div>${banner()}
+  <h2 class="gh">Account</h2><div class="group">${grow('acct','','Signed in as',`<span class="val">${esc(userEmail)}</span>`)}${grow('logout','','Log out')}</div>
+  <h2 class="gh">Backup</h2><div class="group">${grow('page','backup','Export Backup','','Copy all your data as text')}${grow('page','restore','Import Backup','','Restore data from a previous backup')}</div>
+  <h2 class="gh">Studio</h2><div class="group">${grow('page','firings','Firing Log',c(S.firings.length))}${grow('page','shrink','Shrinkage Calculator')}</div>
+  <h2 class="gh">Preferences</h2><div class="group">${grow('page','stages','Stages',c(stages().length))}${CATS.map(([k,l])=>grow('cat',k,l,c(libNames(k).length+usedNotInLib(k).length))).join('')}</div>
+  <h2 class="gh">Units</h2><div class="group">${grow('unit','d','Dimensions unit',`<span class="val">${DU()?'in':'cm'}</span>`)}${grow('unit','w','Weight unit',`<span class="val">${WU()?'oz (ounces)':'g (grams)'}</span>`)}${grow('curpick','','Currency',`<span class="val">${esc(S.settings.cur)}</span>`)}</div>
+  <p class="gfoot">Your pieces and photos are saved to your Pottery Log account. Only you can see them. Log in on any device to see them there.</p>`}
+
+function nav(title,right=''){return `<div class="subnav"><button class="navb" data-act="back" aria-label="Back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"/></svg></button><h2>${esc(title)}</h2>${right||'<span></span>'}</div>`}
+function vPage(){
+  const k=page.k;
+  if(k==='archived'){const ps=S.pieces.filter(p=>p.status==='Archived').sort(byNew);return nav('Archived')+(ps.length?`<p class="intro hint">Pieces that didn't work out, or that you want out of the way. Open one and use ⋯ to unarchive.</p><div class="rlist" style="margin-top:12px">${ps.map(prow).join('')}</div>`:'<div class="empty"><p>No archived pieces. Long-press a piece and choose Archive to move it here.</p></div>')}
+  if(k==='cat'){matCat=page.c;const items=[...lib(matCat)].sort((a,b)=>a.name.localeCompare(b.name));
+    const used=usedNotInLib(matCat);const vis=items.filter(x=>!x.hidden),hid=items.filter(x=>x.hidden);
+    const row=x=>{const u=usage(matCat,x.name).length;return `<button class="grow" data-act="editmat" data-id="${esc(x.id)}">${KC[matCat]?`<span class="sw" style="background:${isHex(x.color)?x.color:KC[matCat][2]}"></span>`:''}<span class="gt">${esc(x.name)}${x.brand||u?`<small>${esc([x.brand,u?u+' piece'+(u===1?'':'s'):''].filter(Boolean).join(' · '))}</small>`:''}</span><span class="info" aria-hidden="true">i</span></button>`};
+    return nav(CATN[matCat],'<button class="navb r" data-act="newmat">Add</button>')+
+     (vis.length+used.length?`<div class="group" style="margin-top:20px">${[...vis,...used].sort((a,b)=>a.name.localeCompare(b.name)).map(row).join('')}</div>`:`<div class="empty"><p>Nothing here yet. Tap Add, or type a new name on a piece and it's added here automatically.</p></div>`)+
+     (hid.length?`<h2 class="gh" style="font-size:15px;color:var(--mute);font-weight:600">HIDDEN</h2><div class="group">${hid.map(row).join('')}</div>`:'')}
+  if(k==='stages'){const st=stages();
+    if(!stEdit)return nav('Stages','<button class="navb r" data-act="stedit">Edit</button>')+`<p class="intro">This is the list of stages shown on your pieces. Tap Edit to rename, add, remove or reorder them.</p>
+      ${st.length>2?`<div class="group" style="margin-top:20px"><div class="grow"><span class="num">0</span><span class="gt">${esc(st[0])}</span></div></div><div class="group" style="margin-top:20px">${st.slice(1,-1).map((s,i)=>`<div class="grow"><span class="num">${i+1}</span><span class="gt">${esc(s)}</span></div>`).join('')}</div><div class="group" style="margin-top:20px"><div class="grow"><span class="num">${st.length-1}</span><span class="gt">${esc(st[st.length-1])}</span></div></div>`:`<div class="group" style="margin-top:20px">${st.map((s,i)=>`<div class="grow"><span class="num">${i}</span><span class="gt">${esc(s)}</span></div>`).join('')}</div>`}`;
+    return nav('Stages','<button class="navb r" data-act="stedit">Done</button>')+`<p class="intro hint">Renaming a stage updates every piece in it. A stage can only be removed when it's empty.</p>
+      <div class="group" style="margin-top:16px">${st.map((s,i)=>`<div class="stedit"><input type="text" value="${esc(s)}" data-stage="${i}" aria-label="Stage ${i+1} name"><button class="ib" data-act="stup" data-id="${i}" ${i?'':'disabled'} aria-label="Move up">↑</button><button class="ib" data-act="stdown" data-id="${i}" ${i<st.length-1?'':'disabled'} aria-label="Move down">↓</button><button class="ib" data-act="stdel" data-id="${i}" aria-label="Remove stage" style="color:var(--danger)">−</button></div>`).join('')}
+      <div class="stedit" style="grid-template-columns:minmax(0,1fr) auto"><input type="text" id="newStage" placeholder="New stage"><button class="btn pri" data-act="stadd">Add</button></div></div>`}
+  if(k==='firings'){const list=[...S.firings].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    return nav('Firing Log','<button class="navb r" data-act="newfiring">Add</button>')+(list.length?`<div class="group" style="margin-top:20px">${list.map(f=>`<button class="frow" data-act="editfiring" data-id="${esc(f.id)}"><span class="meta"><span>${esc(fmtDate(f.date))}</span><span>${(f.pieceIds||[]).length} piece${(f.pieceIds||[]).length===1?'':'s'}</span>${f.kiln?`<span>${esc(f.kiln)}</span>`:''}</span><b>${esc(f.type||'Firing')}${f.cone?' · Cone '+esc(f.cone):''}${f.temp?' · '+esc(f.temp):''}</b>${f.notes?`<span class="hint">${esc(f.notes.slice(0,120))}</span>`:''}</button>`).join('')}</div>`
+     :`<div class="empty">${pot(56)}<h2>No firings yet</h2><p>Log each kiln load with its cone, temperature and the pieces inside. You can move those pieces to the next stage at the same time.</p><button class="bigbtn" data-act="newfiring">Log a firing</button></div>`)}
+  if(k==='shrink'){const rows={};S.pieces.forEach(p=>{const s=shrinkPct(p),l=lossPct(p);if(!p.clay||(s==null&&l==null))return;const r=rows[p.clay]=rows[p.clay]||{s:[],l:[]};if(s!=null)r.s.push(s);if(l!=null)r.l.push(l)});
+    const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)+'%':'—';
+    return nav('Shrinkage')+`<div style="display:grid;gap:16px;margin-top:20px">
+     <div class="panel"><h3>Measured shrinkage</h3><p class="hint">Measure a piece or test bar before and after firing.</p><div class="row"><label>Before <small>${lu()}</small><input type="number" inputmode="decimal" id="c_a"></label><label>After firing <small>${lu()}</small><input type="number" inputmode="decimal" id="c_b"></label></div><div><span class="hint">Shrinkage</span><div class="big" id="c_out">—</div></div></div>
+     <div class="panel"><h3>Make it this size</h3><p class="hint">How big to make it so it ends up at the size you want.</p><div class="row"><label>Wanted fired size <small>${lu()}</small><input type="number" inputmode="decimal" id="c_t"></label><label>Clay shrinkage <small>%</small><input type="number" inputmode="decimal" id="c_p" value="12"></label></div><div><span class="hint">Make it</span><div class="big" id="c_out2">—</div></div></div>
+     <div class="panel"><h3>Your clay bodies</h3><p class="hint">Averages from pieces where you logged size or weight at more than one stage.</p>${Object.keys(rows).length?`<table><thead><tr><th>Clay body</th><th class="n">Shrinkage</th><th class="n">Weight loss</th></tr></thead><tbody>${Object.entries(rows).map(([c,r])=>`<tr><td>${esc(c)}</td><td class="n">${avg(r.s)}</td><td class="n">${avg(r.l)}</td></tr>`).join('')}</tbody></table>`:'<p class="hint">Nothing to compare yet.</p>'}</div></div>`}
+  if(k==='backup'||k==='restore'){const ex=k==='backup';
+    return nav(ex?'Export Backup':'Import Backup')+`<div style="display:grid;gap:16px;margin-top:20px"><div class="panel">
+     <p class="hint">${ex?'This text holds all your pieces, firings and lists. Copy it into a note or an email to yourself.':'Paste a backup here and tap Restore. Anything already in your log is kept; only missing pieces, firings and list entries are added.'}</p>
+     <textarea id="bkText" aria-label="Backup data" style="font:13px/1.4 ui-monospace,monospace;min-height:180px">${ex?esc(JSON.stringify({app:'pottery-log',v:3,exported:new Date().toISOString(),pieces:S.pieces,firings:S.firings,settings:S.settings})):''}</textarea>
+     <div class="addrow">${ex?'<button class="btn pri" data-act="bkcopy">Copy</button><button class="btn" data-act="bkdl">Download file</button>':'<label class="btn" style="display:inline-flex;align-items:center;cursor:pointer">Choose file<input type="file" id="bkFile" accept=".json,.txt,application/json,text/plain" hidden></label><button class="btn pri" data-act="bkload">Restore</button>'}</div></div></div>`}
+  return nav('')}
+function calc(){const a=num($('#c_a')&&$('#c_a').value),b=num($('#c_b')&&$('#c_b').value),t=num($('#c_t')&&$('#c_t').value),p=num($('#c_p')&&$('#c_p').value);
+  if($('#c_out'))$('#c_out').textContent=a&&b!=null?((1-b/a)*100).toFixed(1)+'%':'—';
+  if($('#c_out2'))$('#c_out2').textContent=t&&p!=null&&p<100?(t/(1-p/100)).toFixed(1)+' '+lu():'—'}
+function usage(cat,name){const n=String(name).toLowerCase(),eq=v=>String(v||'').toLowerCase()===n;
+  return S.pieces.filter(p=>KC[cat]?p.layers.some(l=>l.kind===cat&&eq(l.name)):cat==='area'?p.layers.some(l=>eq(l.area)):cat==='method'?p.layers.some(l=>eq(l.method)):cat==='location'?eq(p.location)||Object.values(p.log).some(e=>eq(e&&e.location)):eq(p[cat]))}
+function usedNotInLib(cat){const known=new Set(lib(cat).map(x=>x.name.toLowerCase())),out=[];
+  S.pieces.forEach(p=>{const ns=KC[cat]?p.layers.filter(l=>l.kind===cat).map(l=>l.name):cat==='area'||cat==='method'?p.layers.map(l=>l[cat]):cat==='location'?[p.location,...Object.values(p.log).map(e=>e&&e.location)]:[p[cat]];
+    ns.forEach(n=>{n=String(n||'').trim();if(n&&!known.has(n.toLowerCase())){known.add(n.toLowerCase());const l=KC[cat]&&p.layers.find(x=>x.name===n);out.push({id:'v:'+n,name:n,color:l&&l.color})}})});return out}
+
+/* ---------- piece detail ---------- */
+function openSheet(mode,id){sheet={mode,id};$('#sheet').classList.add('open');document.body.style.overflow='hidden';$('#sheet').scrollTop=0}
+function closeSheet(){if(aiCtl){aiCtl.abort();aiCtl=null}sheet=null;ed=null;fe=null;$('#sheet').classList.remove('open');document.body.style.overflow='';render()}
+function renderDetail(){
+  const p=S.pieces.find(x=>x.id===sheet.id);if(!p){closeSheet();return}
+  const st=stages(),ci=st.indexOf(p.stage),next=ci>=0&&ci<st.length-1?st[ci+1]:null;
+  $('#sheetBar').innerHTML=`<button class="navb" data-act="closesheet">‹ Back</button><h2 id="sheetTitle">${esc(p.title)}</h2><div><button class="navb" data-act="quick" data-id="${esc(p.id)}" aria-label="More actions">⋯</button><button class="navb" data-act="edit" data-id="${esc(p.id)}">Edit</button></div>`;
+  const firings=S.firings.filter(f=>(f.pieceIds||[]).includes(p.id)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const o=ordered(p),sh=shrinkPct(p),ls=lossPct(p);
+  $('#sheetBody').innerHTML=`<div class="sbody"><div class="col">
+   ${p.photos.length?`<div><div class="carousel" id="car">${photosByStage(p).map((x,i)=>`<figure><img src="${esc(safeSrc(x.src))}" alt="${esc(p.title)} photo ${i+1}${x.stage?', '+esc(x.stage):''}">${x.stage?`<figcaption class="phcap">${esc(x.stage)}${p.log[x.stage]&&p.log[x.stage].date?' · '+esc(fmtDate(p.log[x.stage].date)):''}</figcaption>`:''}</figure>`).join('')}</div>${p.photos.length>1?`<div class="carnav"><button class="ib" data-act="car" data-id="-1" aria-label="Previous photo">‹</button><span>${p.photos.length} photos</span><button class="ib" data-act="car" data-id="1" aria-label="Next photo">›</button></div>`:''}</div>`:`<div class="carousel"><figure>${pot(80)}</figure></div>`}
+   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>${esc(p.stage)}</h3>${next?`<button class="btn pri" data-act="advance" data-id="${esc(p.id)}">Move to ${esc(next)}</button>`:''}${ci===st.length-1?`<button class="btn" data-act="showcase" data-id="${esc(p.id)}">Showcase</button>`:''}</div>
+    <ol class="stepper">${st.map((s,i)=>`<li class="${ci>=0&&i<ci?'done':i===ci?'cur':''}"><span class="sd"></span><span>${esc(s)}</span><span>${esc(fmtDate(p.log[s]&&p.log[s].date))}</span></li>`).join('')}</ol></div>
+   <div class="card"><dl class="facts">${[['Status',p.status],['Location',p.location],['Form',p.form],['Forming method',p.forming],['Clay body',p.clay],['Price',p.price?S.settings.cur+' '+p.price:''],['Added',new Date(p.created).toLocaleDateString()]].filter(x=>x[1]).map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>
+   <div class="card"><h3>Decoration layers</h3>${p.layers.length?`<div class="llist">${p.layers.map((l,i)=>`<div class="litem"><span class="sw" style="background:${isHex(l.color)?l.color:'#999'}"></span><div><b>${i+1}. ${esc(l.name||KC[l.kind][1])}</b> <span class="hint">${esc(KC[l.kind][1])}</span><small>${esc([l.coats+' coat'+(l.coats>1?'s':''),l.method,l.area,l.dip?l.dip+' s dip':''].filter(Boolean).join(' · '))}</small>${l.note?`<small>${esc(l.note)}</small>`:''}</div></div>`).join('')}</div>`:'<p class="hint">None logged yet.</p>'}</div>
+   <div class="card"><h3>Measurements</h3>${o.length?`<table><thead><tr><th>Stage</th><th>Date</th><th class="n">Weight</th><th class="n">W × L × H</th></tr></thead><tbody>${o.map(s=>{const e=p.log[s]||{};const fz=firingTxt(e.firing);return `<tr><td>${esc(s)}${e.location?`<br><span class="hint">${esc(e.location)}</span>`:''}${fz?`<br><span class="hint">${esc(fz)}</span>`:''}</td><td>${esc(fmtDate(e.date))}</td><td class="n">${fw(num(e.weight))}</td><td class="n">${esc(dimTxt(e)||'—')}</td></tr>`}).join('')}</tbody></table>
+     ${sh!=null||ls!=null?`<p class="hint">${sh!=null?'Shrinkage so far: <b>'+sh.toFixed(1)+'%</b>. ':''}${ls!=null?'Weight lost: <b>'+ls.toFixed(1)+'%</b>.':''}</p>`:''}`:'<p class="hint">No measurements yet.</p>'}</div>
+   ${firings.length?`<div class="card"><h3>Firings</h3>${firings.map(f=>`<div>${esc(fmtDate(f.date))} · <b>${esc(f.type)}</b>${f.cone?' · Cone '+esc(f.cone):''}${f.temp?' · '+esc(f.temp):''}${f.kiln?' · '+esc(f.kiln):''}</div>`).join('')}</div>`:''}
+   ${p.notes?`<div class="card"><h3>Notes</h3><div style="white-space:pre-wrap">${esc(p.notes)}</div></div>`:''}
+  </div>${p.layers.length?`<aside class="side"><div class="card"><h3>Cross-section</h3><p class="hint">The surface layers stacked on the clay, first layer at the bottom. Thicker bands mean more coats.</p>${xsecSvg(p.layers,p.clay)}</div></aside>`:''}</div>`;
+  const cur=$('.stepper li.cur');if(cur){const ol=cur.parentNode;ol.scrollLeft=cur.offsetLeft-ol.clientWidth/2+cur.clientWidth/2}}
+
+/* ---------- piece editor ---------- */
+const svg=(d,f)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC={cam:svg('<path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),cal:svg('<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/>'),
+ pin:svg('<path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+ hand:svg('<path d="M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V3.5a1.5 1.5 0 0 1 3 0V11M14 11V5a1.5 1.5 0 0 1 3 0v8c0 4-2.5 7-6 7-2.5 0-4-1.2-5.5-3.5L4 13.5a1.5 1.5 0 0 1 2.5-1.6L8 14"/>'),
+ form:svg('<path d="M12 3l4 6H8z"/><rect x="4" y="13" width="7" height="7"/><circle cx="17" cy="16.5" r="3.5"/>'),
+ clay:svg('<path d="M7 18h11a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.5A3.3 3.3 0 0 0 7 18z"/>'),
+ wt:svg('<path d="M6 4h12M8 4l4 6 4-6M12 10c-4 0-6 3.5-6 10h12c0-6.5-2-10-6-10z"/>'),
+ dim:svg('<rect x="3" y="8" width="18" height="8" rx="1"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/>'),
+ fire:svg('<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.6 1 2.6 2 3 0-3 0-5.5.5-8z"/>'),
+ stat:svg('<circle cx="12" cy="12" r="8"/>'),tag:svg('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>'),
+ ud:'<svg viewBox="0 0 14 22" width="14" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4-4 4 4M3 14l4 4 4-4"/></svg>',
+ spark:'<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 5.6L19.5 9.5l-5.7 1.9L12 17l-1.8-5.6L4.5 9.5l5.7-1.9zM19 15l.9 2.6 2.6.9-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>',
+ crop:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/></svg>',
+ check:'<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5l4 4 8-9"/></svg>'};
+const STATDOT={'Not for sale':'#8e8e93','Available':'var(--acc)','Sold':'var(--ok)','Gifted':'#ff9f0a','Traded':'#bf5af2','Archived':'#636366'};
+function dimTxt(e){const v=[e.w,e.l,e.h].map(num);if(v.every(x=>x==null))return '';return v.map(x=>x==null?'–':DU()?+(x/2.54).toFixed(1):Math.round(x*10)/10).join(' × ')+' '+lu()}
+function firingTxt(f){return f?[f.type,f.cone?'Cone '+f.cone:'',f.temp].filter(Boolean).join(' · '):''}
+function dateLabel(d){if(!d)return 'None';const dt=new Date(d+'T12:00');if(isNaN(dt))return esc(d);const s=dt.toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'});return (d===today()?'Today • ':'')+esc(s)}
+const E=()=>ed.log[ed.stage]||(ed.log[ed.stage]={date:today(),location:ed.location||''});
+function openEditor(p){
+  isNew=!p;removedAssets=[];armed=null;
+  ed=p?clone(p):{id:uid(),title:'',stage:stages()[0],status:'Not for sale',form:'',forming:'',clay:'',location:'',price:'',notes:'',layers:[],photos:[],log:{},created:Date.now()};
+  origLog=new Set(Object.keys(ed.log));E();
+  openSheet('edit',ed.id);
+  $('#sheetBar').innerHTML=`<button class="navb" data-act="canceledit">Cancel</button><input id="sheetTitle" class="tinput" data-f="title" value="${esc(ed.title)}" placeholder="Untitled" aria-label="Piece name" autocomplete="off"><button class="savepill" data-act="savepiece">Save</button>`;
+  $('#sheetBody').innerHTML=`<div class="ebody">
+   <div class="phrow" id="photos"></div>
+   ${sampleFn?`<div class="namer"><button class="aibtn" data-act="ainame" id="aiBtn">${IC.spark}<span>Name it for me</span></button><div id="aiOut" class="aichips" aria-live="polite"></div></div>`:''}
+   <div class="scard" id="stageCard"></div>
+   <h2 class="eh">About</h2><div class="elist" id="aboutList"></div>
+   <h2 class="eh">Decorations</h2><div class="dchips">${KINDS.map(k=>`<button class="dchip" data-act="addlayer" data-id="${k[0]}">+ ${k[1]}</button>`).join('')}</div>
+   <div id="layersBox" style="display:grid;gap:10px;margin-top:12px"></div><div id="xsWrap" style="margin-top:12px"><div id="xsBox"></div></div>
+   <h2 class="eh">Notes</h2><textarea class="notes" data-f="notes" aria-label="Notes" placeholder="Notes">${esc(ed.notes||'')}</textarea>
+   <h2 class="eh">Status</h2><div class="elist" id="statusList"></div>
+   <div id="earlier"></div>
+   ${isNew?'':'<div style="padding:28px 0 0"><button class="btn del" data-act="delpiece" data-id="'+esc(ed.id)+'">Delete piece</button></div>'}</div>`;
+  renderEd();
+}
+function renderEd(){renderStageCard();renderAbout();renderStatusList();renderLayers();renderPhotos();renderLog()}
+function erow(act,icon,label,val,sub=''){return `<button class="erow" data-act="${act}"><span class="ic">${icon}</span><span class="gt">${label}${sub?`<small>${sub}</small>`:''}</span><span class="ev ${val?'':'none'}">${val?esc(val):'Select'}</span>${CHEV}</button>`}
+function renderStageCard(){const e=E();
+  $('#stageCard').innerHTML=`<button class="scrow top" data-act="edstage"><span class="okc">${IC.check}</span><span class="gt"><small>Current Stage</small><b>${esc(ed.stage)}</b></span><span class="udi">${IC.ud}</span></button>
+   <label class="scrow"><span class="ic">${IC.cal}</span><span class="gt">Date: ${dateLabel(e.date)}</span><input type="date" class="overlay" id="edDate" value="${esc(e.date||'')}" aria-label="Stage date"></label>
+   <button class="scrow" data-act="edloc"><span class="ic">${IC.pin}</span><span class="gt">Location: <span class="${e.location?'':'mute'}">${esc(e.location||'None')}</span></span></button>`}
+function renderAbout(){const e=E();
+  $('#aboutList').innerHTML=erow('edforming',IC.hand,'Forming Method',ed.forming)+erow('edform',IC.form,'Form',ed.form)+erow('edclay',IC.clay,'Clay Body',ed.clay)+
+   erow('edweight',IC.wt,'Weight',num(e.weight)!=null?fw(num(e.weight)):'')+erow('eddims',IC.dim,'Dimensions',dimTxt(e),'Width x Length x Height')+erow('edfiring',IC.fire,'Firing',firingTxt(e.firing))}
+function renderStatusList(){
+  $('#statusList').innerHTML=`<button class="erow" data-act="edstatus"><span class="ic">${IC.stat}</span><span class="gt">Status</span><span class="ev" style="display:flex;align-items:center;gap:8px;color:var(--ink)"><span style="width:16px;height:16px;border-radius:50%;background:${STATDOT[ed.status]||'#8e8e93'}"></span>${esc(ed.status)}</span><span class="udi">${IC.ud}</span></button>
+   <label class="erow"><span class="ic">${IC.tag}</span><span class="gt">Price</span><span class="ev none">${esc(S.settings.cur)}</span><input class="pricein" type="number" inputmode="decimal" min="0" data-f="price" value="${esc(ed.price||'')}" placeholder="0" aria-label="Price"></label>`}
+function renderLog(){
+  const prior=ordered(ed).filter(s=>s!==ed.stage);
+  $('#earlier').innerHTML=prior.length?`<details class="earlier"><summary class="eh" style="cursor:pointer">Earlier stages <span class="mute" style="font-weight:500">(${prior.length})</span></summary><div id="logBox" style="display:grid;gap:10px">${prior.map(s=>{const e=ed.log[s]||{};return `<div class="logrow" data-st="${esc(s)}"><div class="lr-h"><b>${esc(s)}</b><input type="date" data-l="date" value="${esc(e.date||'')}" aria-label="${esc(s)} date"></div>
+   <div class="row"><label>Weight <small>${wu()}</small><input type="number" inputmode="decimal" min="0" data-l="weight" value="${outW(num(e.weight))}"></label><label>Height <small>${lu()}</small><input type="number" inputmode="decimal" min="0" data-l="h" value="${outL(num(e.h))}"></label><label>Location<input type="text" list="dl_location" data-l="location" value="${esc(e.location||'')}"></label></div></div>`}).join('')}</div></details>`:''}
+function renderXs(){$('#xsBox').innerHTML=ed.layers.length?xsecSvg(ed.layers,ed.clay):''}
+function renderLayers(){
+  const L=ed.layers;
+  $('#layersBox').innerHTML=L.length?L.map((l,i)=>`<div class="layer" data-i="${i}">
+   <div class="lhead"><div class="lnum"><input type="color" data-k="color" value="${isHex(l.color)?l.color:'#999999'}" aria-label="Layer colour">Layer ${i+1}</div>
+    <div class="lbtns"><button class="ib" data-act="lup" data-id="${i}" aria-label="Move up" ${i?'':'disabled'}>↑</button><button class="ib" data-act="ldown" data-id="${i}" aria-label="Move down" ${i<L.length-1?'':'disabled'}>↓</button><button class="ib" data-act="lrm" data-id="${i}" aria-label="Remove layer">✕</button></div></div>
+   <div class="row"><label>Type<select data-k="kind">${opts(KINDS.map(k=>[k[0],k[1]]),l.kind)}</select></label>
+    <label>Name<input type="text" data-k="name" list="dl_${esc(l.kind)}" value="${esc(l.name||'')}" placeholder="e.g. Amaco Celadon"></label></div>
+   <div class="row"><label>Coats<div class="coats"><button class="ib" data-act="lminus" data-id="${i}" aria-label="Fewer coats">−</button><output>${l.coats||1}</output><button class="ib" data-act="lplus" data-id="${i}" aria-label="More coats">+</button></div></label>
+    <label>Application<select data-k="method">${opts(libNames('method').concat(l.method&&!libNames('method').includes(l.method)?[l.method]:[]),l.method||'','—')}</select></label>
+    <label>Surface area<select data-k="area">${opts(libNames('area').concat(l.area&&!libNames('area').includes(l.area)?[l.area]:[]),l.area||'','—')}</select></label>
+    <label>Dip time <small>seconds</small><input type="number" inputmode="decimal" min="0" data-k="dip" value="${esc(l.dip??'')}"></label></div>
+   <label>Note<input type="text" data-k="note" value="${esc(l.note||'')}" placeholder="Thick on rim, wiped foot…"></label></div>`).join(''):'<p class="hint">No layers yet. Add one with the buttons below.</p>';
+  renderXs()}
+function renderPhotos(){
+  $('#photos').innerHTML=`<label class="phtile add"><span class="camc">${IC.cam}</span><span>${busy?'Adding…':'Add photo'}</span><input type="file" accept="image/*" multiple id="phIn"></label>`+
+   ed.photos.map((p,i)=>`<div class="phcol"><figure class="phtile"><img src="${esc(safeSrc(p.src))}" alt="Photo ${i+1}" data-act="crop" data-id="${i}"><button data-act="rmph" data-id="${i}" aria-label="Remove photo ${i+1}">✕</button><button class="cropb" data-act="crop" data-id="${i}" aria-label="Crop photo ${i+1}">${IC.crop}<span>Crop</span></button></figure><select class="phst" data-phst="${i}" aria-label="Stage of photo ${i+1}">${opts(stages().concat(p.stage&&!stages().includes(p.stage)?[p.stage]:[]),p.stage||'','Stage…')}</select></div>`).join('')}
+/* photo cropper */
+let crop=null,cropDragEnd=0;
+function openCrop(i){const ph=ed&&ed.photos[+i];if(!ph)return;const img=new Image();
+  img.onload=()=>{const NW=img.naturalWidth,NH=img.naturalHeight;crop={i:+i,img,ar:0,NW,NH,box:{x:0,y:0,w:NW,h:NH}};
+    const AR=[['0','Free'],['1','1:1'],['0.8','4:5'],['0.75','3:4'],['1.3333','4:3']];
+    modal(`<h3>Crop photo</h3><div class="cropwrap" id="cropWrap"><img id="cropImg" src="${esc(safeSrc(ph.src))}" alt="Photo to crop" draggable="false"><div class="cropbox" id="cropBox"><i class="cg"></i>${['nw','ne','sw','se'].map(h=>`<span class="ch ${h}" data-h="${h}"></span>`).join('')}</div></div>
+     <div class="seg cropar" role="group" aria-label="Shape">${AR.map(([v,l])=>`<button data-act="cropar" data-id="${v}" aria-pressed="${v==='0'}">${l}</button>`).join('')}</div>
+     <p class="hint">Drag the frame to move it, drag a corner to resize.</p>
+     <div class="mact"><button class="btn" data-act="cropreset">Reset</button><button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="cropapply">Apply</button></div>`);
+    requestAnimationFrame(drawCrop)};
+  img.onerror=()=>toast('That photo could not be opened');img.src=safeSrc(ph.src)}
+function cropScale(){const im=$('#cropImg');return im&&crop?im.clientWidth/crop.NW:1}
+function drawCrop(){const b=$('#cropBox');if(!b||!crop)return;const k=cropScale(),x=crop.box;
+  b.style.left=x.x*k+'px';b.style.top=x.y*k+'px';b.style.width=x.w*k+'px';b.style.height=x.h*k+'px'}
+function setCropAr(ar){if(!crop)return;crop.ar=ar;if(!ar)return drawCrop();const {NW,NH}=crop;let w,h;
+  if(NW/NH>ar){h=NH;w=NH*ar}else{w=NW;h=NW/ar}crop.box={x:(NW-w)/2,y:(NH-h)/2,w,h};drawCrop()}
+let cd=null;
+document.addEventListener('pointerdown',e=>{if(!crop)return;const b=e.target.closest('#cropBox');if(!b)return;e.preventDefault();
+  cd={h:e.target.dataset.h||'move',sx:e.clientX,sy:e.clientY,b:{...crop.box},k:cropScale()};try{b.setPointerCapture(e.pointerId)}catch(_){}});
+document.addEventListener('pointermove',e=>{if(!cd||!crop)return;e.preventDefault();
+  const dx=(e.clientX-cd.sx)/cd.k,dy=(e.clientY-cd.sy)/cd.k,{NW,NH}=crop,MIN=Math.max(40,Math.min(NW,NH)*0.06),s=cd.b,h=cd.h;
+  if(h==='move'){crop.box={...s,x:Math.max(0,Math.min(NW-s.w,s.x+dx)),y:Math.max(0,Math.min(NH-s.h,s.y+dy))};return drawCrop()}
+  let L=s.x,T=s.y,R=s.x+s.w,B=s.y+s.h;
+  if(h.includes('w'))L=Math.min(R-MIN,Math.max(0,L+dx));if(h.includes('e'))R=Math.max(L+MIN,Math.min(NW,R+dx));
+  if(h.includes('n'))T=Math.min(B-MIN,Math.max(0,T+dy));if(h.includes('s'))B=Math.max(T+MIN,Math.min(NH,B+dy));
+  let w=R-L,hh=B-T;if(crop.ar){const sz=Math.min(w,hh*crop.ar);w=sz;hh=sz/crop.ar;if(h.includes('w'))L=R-w;else R=L+w;if(h.includes('n'))T=B-hh;else B=T+hh}
+  crop.box={x:L,y:T,w:R-L,h:B-T};drawCrop()},{passive:false});
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,()=>{if(cd){cd=null;cropDragEnd=Date.now()}}));
+window.addEventListener('resize',()=>{if(crop)drawCrop()});
+async function applyCrop(){if(!crop||!ed)return;const c=crop,{x,y,w,h}=c.box,max=cloud&&assets?1600:1000,k=Math.min(1,max/Math.max(w,h));
+  const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*k));cv.height=Math.max(1,Math.round(h*k));
+  try{cv.getContext('2d').drawImage(c.img,x,y,w,h,0,0,cv.width,cv.height)}catch(e){return toast('That photo could not be cropped')}
+  const btn=$('[data-act=cropapply]');if(btn){btn.disabled=true;btn.textContent='Saving…'}
+  try{const blob=await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('encode')),'image/jpeg',.86));
+    const np=await storePhoto(blob);const old=ed.photos[c.i];if(old&&old.stage)np.stage=old.stage;if(old&&old.aid)removedAssets.push(old.aid);ed.photos[c.i]=np;crop=null;closeModal();renderPhotos();toast('Photo cropped')}
+  catch(e){toast('That photo could not be cropped');if(btn){btn.disabled=false;btn.textContent='Apply'}}}
+/* list picker used by the editor */
+let pickCb=null,pickCat=null,origLog=new Set(),sampleFn=null,aiCtl=null;
+async function photoBlobs(){const out=[];for(const ph of ed.photos.slice(0,2)){try{const s=safeSrc(ph.src);if(!s)continue;if(s.startsWith('data:'))out.push(dataToBlob(s));else{const r=await fetch(s);if(r.ok)out.push(await r.blob())}}catch(e){}}return out}
+async function aiName(){
+  const out=$('#aiOut'),btn=$('#aiBtn');if(!out)return;
+  if(!sampleFn){out.innerHTML='<span class="hint">Naming needs this page opened in Claude while signed in.</span>';return}
+  btn.disabled=true;out.innerHTML='<span class="hint">Thinking…</span>';
+  let imgs=await photoBlobs();let lim=null;try{lim=await sampleFn.limits()}catch(e){}
+  if(!lim||!lim.images)imgs=[];else imgs=imgs.slice(0,lim.images.maxCount||1);
+  const e=E();const facts=[ed.form&&'Form: '+ed.form,ed.forming&&'Forming method: '+ed.forming,ed.clay&&'Clay body: '+ed.clay,'Stage: '+ed.stage,
+    ed.layers.length&&'Surface layers: '+ed.layers.map(l=>(l.coats||1)+'x '+(l.name||KC[l.kind][1])+(l.area?' ('+l.area+')':'')).join(', '),
+    dimTxt(e)&&'Size: '+dimTxt(e),ed.notes&&'Potter\'s notes: '+String(ed.notes).slice(0,600),ed.title&&'Current working title: '+ed.title].filter(Boolean).join('\n');
+  const prompt=`You are helping a potter name a handmade ceramic piece in their studio log.${imgs.length?' The attached photo shows the piece, or a sketch or work in progress of it.':' There is no photo; use the details.'}\n\nDetails:\n${facts}\n\nSuggest 5 short, distinctive names in Hungarian, 2 to 4 words each, with correct Hungarian accents. Base every name on the SHAPE of the piece: its silhouette and proportions (tall, squat, slender, rounded, bellied, flared), the neck, shoulder, rim, foot and handle, and the form type (vase, bowl, mug…). Do NOT mention colours, glaze colours or colour words at all. Vary the style: some plain and descriptive, some more poetic, but always about the form. No numbering, no quotation marks inside the names.\nReply with only a JSON array of 5 strings, for example ["Karcsú nyakú váza","Öblös hasú korsó"].`;
+  if(aiCtl)aiCtl.abort();aiCtl=new AbortController();
+  try{const arr=await sampleFn.json(prompt,{images:imgs.length?imgs:undefined,modelTier:'quick',cache:false,signal:aiCtl.signal});
+    const names=(Array.isArray(arr)?arr:[]).map(x=>String(x).trim()).filter(Boolean).slice(0,6);
+    if(!$('#aiOut'))return;
+    $('#aiOut').innerHTML=names.length?names.map(n=>`<button class="aichip" data-act="ainamepick" data-id="${esc(n)}">${esc(n)}</button>`).join('')+'<button class="aichip more" data-act="ainame">More ideas</button>':'<span class="hint">No names came back. Try again.</span>';
+  }catch(err){if(!$('#aiOut'))return;const c=err&&err.code;
+    $('#aiOut').innerHTML=c==='cancelled'?'':`<span class="hint">${c==='not_granted'||c==='sampling_disabled'?'Claude isn’t allowed for this page, so it can’t suggest names.':c==='rate_limited'?'Too many requests right now. Try again in a little while.':c==='image_rejected'?'That photo couldn’t be read. Try another one.':'Couldn’t get names. Try again.'}</span>`}
+  finally{const b=$('#aiBtn');if(b)b.disabled=false}}
+function listPicker(title,cat,cur,list,cb,o={}){pickCb=cb;pickCat=cat;
+  const rows=list.map(v=>`<button class="${v===cur?'on':''}" data-act="pkset" data-id="${esc(v)}" data-n="${esc(v.toLowerCase())}">${esc(v)}${v===cur?' ✓':''}</button>`).join('');
+  modal(`<h3>${esc(title)}</h3>${o.noAdd?'':`<input type="search" id="pk_q" placeholder="Search or add new" autocomplete="off">`}<div class="qa" id="pk_list">${rows||'<p class="hint" style="padding:12px">Nothing yet. Type a name above to add one.</p>'}</div><div id="pk_add"></div>
+   <div class="mact">${!o.noClear&&cur?'<button class="btn" data-act="pkset" data-id="">Clear</button>':''}<button class="btn" data-act="closemodal">Close</button></div>`)}
+const sortedLib=c=>[...libNames(c)].sort((a,b)=>a.localeCompare(b));
+async function savePiece(){
+  if(!ed||busy)return;
+  const p=clone(ed);
+  ['title','form','forming','clay','location','price','notes'].forEach(k=>p[k]=String(p[k]||'').trim());
+  if(!p.title)p.title='Untitled piece';
+  for(const k of Object.keys(p.log)){const e=p.log[k]||{};if(k!==p.stage&&!origLog.has(k)&&!e.location&&['weight','w','l','h'].every(x=>num(e[x])==null)&&!e.firing)delete p.log[k]}
+  p.log[p.stage]=p.log[p.stage]||{};if(!p.log[p.stage].date)p.log[p.stage].date=today();
+  if(p.location&&!p.log[p.stage].location)p.log[p.stage].location=p.location;
+  p.layers=p.layers.map(l=>({...l,name:String(l.name||'').trim(),coats:Math.max(1,+l.coats||1),dip:num(l.dip)}));
+  p.updated=Date.now();
+  const s=clone(S.settings);let ch=false;
+  const add=(c,n,x)=>{n=String(n||'').trim();if(!n)return;const hit=s.lib[c].find(i=>i.name.toLowerCase()===n.toLowerCase());if(!hit){s.lib[c].push({id:uid(),name:n,...x});ch=true}else if(hit.hidden){hit.hidden=false;ch=true}};
+  add('clay',p.clay);add('form',p.form);add('forming',p.forming);add('location',p.location);Object.values(p.log).forEach(e=>add('location',e&&e.location));
+  p.layers.forEach(l=>add(l.kind,l.name,{color:l.color}));
+  $$('[data-act=savepiece]').forEach(b=>b.disabled=true);
+  try{await putPiece(p);if(ch)await putSettings(s);
+    if(cloud&&assets)for(const id of removedAssets){try{await assets.delete(id)}catch(e){}}
+    ed=null;toast(isNew?'Piece added':'Saved');sheet={mode:'detail',id:p.id};render();$('#sheet').scrollTop=0;
+  }catch(e){saveErr(e);$$('[data-act=savepiece]').forEach(b=>b.disabled=false)}}
+
+/* ---------- firings ---------- */
+function pickStage(type){const st=stages();if(type==='Bisque')return st.find(s=>/bisq/i.test(s))||'';if(type==='Glaze')return st.find(s=>/glaze fired/i.test(s))||st.find(s=>/^glazed$/i.test(s))||st.find(s=>/finish/i.test(s))||'';return ''}
+function openFiring(f){
+  isNew=!f;armed=null;
+  fe=f?clone(f):{id:uid(),date:today(),type:'Bisque',cone:'',temp:'',kiln:'',notes:'',pieceIds:[]};
+  const moveTo=pickStage(fe.type);
+  openSheet('firing',fe.id);
+  $('#sheetBar').innerHTML=`<button class="navb" data-act="closesheet">Cancel</button><h2 id="sheetTitle">${isNew?'Log a Firing':'Edit Firing'}</h2><div><button class="navb" data-act="savefiring">Save</button></div>`;
+  const cand=S.pieces.filter(p=>p.status!=='Archived'||fe.pieceIds.includes(p.id)).sort((a,b)=>stages().indexOf(a.stage)-stages().indexOf(b.stage));
+  $('#sheetBody').innerHTML=`<div class="sbody one"><div class="col"><fieldset><legend>Firing</legend>
+   <div class="row"><label>Date<input type="date" data-ff="date" value="${esc(fe.date)}"></label><label>Type<select data-ff="type">${opts(FTYPES,fe.type)}</select></label></div>
+   <div class="row"><label>Cone<input type="text" data-ff="cone" value="${esc(fe.cone)}" placeholder="e.g. 06 or 6"></label><label>Top temperature<input type="text" data-ff="temp" value="${esc(fe.temp)}" placeholder="e.g. 1222 °C"></label></div>
+   <label>Kiln<input type="text" data-ff="kiln" value="${esc(fe.kiln)}" placeholder="Studio kiln, electric…"></label>
+   <label>Notes<textarea data-ff="notes" placeholder="Schedule, hold, cooling, results">${esc(fe.notes)}</textarea></label></fieldset>
+   <fieldset><legend>Pieces in this firing</legend>${cand.length?`<div class="pick">${cand.map(p=>`<label><input type="checkbox" data-pick="${esc(p.id)}" ${fe.pieceIds.includes(p.id)?'checked':''}><span>${esc(p.title)} <small>· ${esc(p.stage)}</small></span></label>`).join('')}</div>
+    <label class="cbx"><input type="checkbox" id="fmove" ${isNew?'checked':''}>Move the checked pieces to</label><select id="fmoveTo" aria-label="Stage to move pieces to">${opts(stages(),moveTo)}</select>`:'<p class="hint">No pieces yet.</p>'}</fieldset>
+   ${isNew?'':`<div><button class="btn del" data-act="delfiring" data-id="${esc(fe.id)}">Delete firing</button></div>`}</div></div>`}
+async function saveFiring(){
+  if(!fe)return;const f=clone(fe);const move=$('#fmove')&&$('#fmove').checked,to=$('#fmoveTo')&&$('#fmoveTo').value;
+  ['cone','temp','kiln','notes'].forEach(k=>f[k]=String(f[k]||'').trim());
+  try{await putFiring(f);
+    if(move&&to)for(const id of f.pieceIds){const p=S.pieces.find(x=>x.id===id);if(!p||p.stage===to)continue;const n=clone(p);n.stage=to;n.log[to]={...(n.log[to]||{}),date:f.date};n.updated=Date.now();try{await putPiece(n)}catch(e){}}
+    toast('Firing saved');closeSheet();
+  }catch(e){saveErr(e)}}
+
+/* ---------- modals ---------- */
+function modal(h){$('#modalBody').innerHTML=h;$('#modal').classList.add('open');const f=$('#modalBody').querySelector('input:not([type=hidden]),select,button');if(f)try{f.focus({preventScroll:true})}catch(e){}}
+function closeModal(){crop=null;cd=null;$('#modal').classList.remove('open');$('#modalBody').innerHTML='';armed=null}
+function quick(id){
+  const p=S.pieces.find(x=>x.id===id);if(!p)return;const st=stages(),ci=st.indexOf(p.stage),next=ci>=0&&ci<st.length-1?st[ci+1]:null;
+  modal(`<h3>${esc(p.title)}</h3><div class="qa">
+   ${sheet&&sheet.mode==='detail'?'':`<button data-act="open" data-id="${esc(id)}">Open</button>`}
+   <button data-act="edit" data-id="${esc(id)}">Edit</button>
+   ${next?`<button data-act="advance" data-id="${esc(id)}">Move to ${esc(next)}</button>`:''}
+   <div class="inl"><select id="qaStage" aria-label="Stage">${opts(st,p.stage)}</select><button class="btn" data-act="qastage" data-id="${esc(id)}">Set stage</button></div>
+   <button data-act="dup" data-id="${esc(id)}">Duplicate…</button>
+   <button data-act="archive" data-id="${esc(id)}">${p.status==='Archived'?'Unarchive':'Archive'}</button>
+   <button class="del" data-act="delpiece" data-id="${esc(id)}">Delete</button></div><div class="mact"><button class="btn" data-act="closemodal">Close</button></div>`)}
+function advance(id){
+  const p=S.pieces.find(x=>x.id===id);if(!p)return;const st=stages(),ci=st.indexOf(p.stage),rest=st.slice(ci+1);if(!rest.length)return;
+  modal(`<h3>Move ${esc(p.title)}</h3><div class="row"><label>To stage<select id="av_s">${opts(rest,rest[0])}</select></label><label>Date<input type="date" id="av_d" value="${today()}"></label></div>
+   <label>Location<input type="text" id="av_l" list="dl_location" value="${esc(p.location||'')}"></label>
+   <div class="row"><label>Weight <small>${wu()}</small><input type="number" inputmode="decimal" id="av_w"></label><label>Height <small>${lu()}</small><input type="number" inputmode="decimal" id="av_h"></label><label>Width <small>${lu()}</small><input type="number" inputmode="decimal" id="av_x"></label></div>
+   <div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="advsave" data-id="${esc(id)}">Save</button></div>`)}
+function matEditor(it,v){
+  const kind=!!KC[matCat];const x=it||{name:v?v.name:'',brand:'',color:kind?(v&&isHex(v.color)?v.color:KC[matCat][2]):'',notes:''};const used=it?usage(matCat,it.name):v?usage(matCat,v.name):[];
+  modal(`<h3>${it||v?esc(x.name):'New '+esc(CATN[matCat].replace(/ies$/,'y').replace(/s$/,'').toLowerCase())}</h3><input type="hidden" id="me_id" value="${esc(it?it.id:'')}"><input type="hidden" id="me_old" value="${esc(v?v.name:'')}">
+   <label>Name<input type="text" id="me_name" value="${esc(x.name)}"></label>
+   ${kind?`<div class="row"><label>Brand or recipe<input type="text" id="me_brand" value="${esc(x.brand||'')}"></label><label>Colour<input type="color" id="me_color" value="${isHex(x.color)?x.color:'#999999'}" style="width:100%;min-height:44px;border:0;background:none"></label></div>`:''}
+   <label>Notes<textarea id="me_notes" placeholder="${kind?'Cone range, how it breaks, food safe…':''}">${esc(x.notes||'')}</textarea></label>
+   ${used.length?`<div><p class="hint">Used on ${used.length} piece${used.length===1?'':'s'}. Tap one to open it.</p><div class="mini">${used.slice(0,24).map(p=>`<button data-act="open" data-id="${esc(p.id)}" aria-label="${esc(p.title)}" title="${esc(p.title)}">${p.photos[0]?`<img src="${esc(safeSrc(p.photos[0].src))}" alt="">`:pot(28)}</button>`).join('')}</div></div>`:''}
+   <div class="mact">${it?`<button class="btn" data-act="hidemat" data-id="${esc(it.id)}">${it.hidden?'Restore':'Hide'}</button>`:''}<button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="savemat">Save</button></div>`)}
+
+/* ---------- actions ---------- */
+const A={
+  tab:id=>{view=id;page=null;stEdit=false;lsSet('view',view);selectMode=false;sel.clear();render();window.scrollTo(0,0)},
+  page:id=>{page={k:id};stEdit=false;render();window.scrollTo(0,0)},
+  cat:id=>{page={k:'cat',c:id};render();window.scrollTo(0,0)},
+  back:()=>{page=null;stEdit=false;render();window.scrollTo(0,0)},
+  newpiece:()=>openEditor(null),
+  open:id=>{closeModal();if(selectMode&&!sheet){sel.has(id)?sel.delete(id):sel.add(id);render();return}openSheet('detail',id);renderDetail()},
+  quick:id=>quick(id),
+  closesheet:()=>closeSheet(),
+  edit:id=>{closeModal();const p=S.pieces.find(x=>x.id===id);if(p)openEditor(p)},
+  canceledit:()=>{if(!isNew&&ed&&S.pieces.some(x=>x.id===ed.id)){const id=ed.id;ed=null;sheet={mode:'detail',id};renderDetail();$('#sheet').scrollTop=0}else closeSheet()},
+  savepiece:()=>savePiece(),
+  delpiece:async(id,t)=>{if(armed!==t){armed=t;t.textContent='Tap again to delete for good';return}
+    const p=S.pieces.find(x=>x.id===id);try{await delPiece(id);if(cloud&&assets&&p)for(const ph of p.photos)if(ph.aid){try{await assets.delete(ph.aid)}catch(e){}}closeModal();toast('Piece deleted');closeSheet()}catch(e){toast('Could not delete. Try again.')}},
+  toggle:id=>{collapsed.has(id)?collapsed.delete(id):collapsed.add(id);lsSet('collapsed',[...collapsed]);render()},
+  selmode:()=>{selectMode=!selectMode;sel.clear();render()},
+  chip:k=>{pickKey=k;const cur=k==='sort'?sortBy:flt[k];const label=k==='arch'?'Show':k==='sort'?'Sort by':FCHIPS.find(x=>x[0]===k)[1];
+    modal(`<h3>${esc(label)}</h3><div class="qa">${chipOptions(k).map(([v,l])=>`<button class="${v===cur?'on':''}" data-act="pick" data-id="${esc(v)}">${esc(l)}${v===cur?' ✓':''}</button>`).join('')}</div><div class="mact"><button class="btn" data-act="closemodal">Close</button></div>`)},
+  pick:v=>{if(pickKey==='sort')sortBy=v||'new';else flt[pickKey]=v||'';closeModal();render()},
+  clearflt:()=>{flt=Object.fromEntries(FKEYS.map(k=>[k,'']));q='';render()},
+  advance:id=>advance(id),
+  advsave:async id=>{const p=S.pieces.find(x=>x.id===id);if(!p)return;const n=clone(p),to=$('#av_s').value,loc=$('#av_l').value.trim();
+    n.stage=to;n.log[to]={...(n.log[to]||{}),date:$('#av_d').value||today(),location:loc,weight:inW($('#av_w').value),h:inL($('#av_h').value),w:inL($('#av_x').value)};
+    if(loc){n.location=loc;if(!lib('location').some(x=>x.name.toLowerCase()===loc.toLowerCase())){const s=clone(S.settings);s.lib.location.push({id:uid(),name:loc});try{await putSettings(s)}catch(e){}}}
+    n.updated=Date.now();try{await putPiece(n);closeModal();toast('Moved to '+to);render()}catch(e){saveErr(e)}},
+  qastage:async id=>{const p=S.pieces.find(x=>x.id===id);const to=$('#qaStage').value;if(!p||p.stage===to)return closeModal();const n=clone(p);n.stage=to;n.log[to]={...(n.log[to]||{}),date:(n.log[to]&&n.log[to].date)||today()};try{await putPiece(n);closeModal();render()}catch(e){saveErr(e)}},
+  archive:async id=>{const p=S.pieces.find(x=>x.id===id);if(!p)return;const n=clone(p);n.status=p.status==='Archived'?'Not for sale':'Archived';try{await putPiece(n);closeModal();toast(n.status==='Archived'?'Archived':'Back in progress');render()}catch(e){saveErr(e)}},
+  dup:id=>{const p=S.pieces.find(x=>x.id===id);modal(`<h3>Duplicate ${esc(p.title)}</h3><p class="hint">Copies keep the clay, form, stage and layers, without photos. Handy for a set of mugs.</p><label>Number of copies<input type="number" id="dupN" min="1" max="20" value="1"></label><div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="dupgo" data-id="${esc(id)}">Duplicate</button></div>`)},
+  dupgo:async id=>{const p=S.pieces.find(x=>x.id===id);const n=Math.max(1,Math.min(20,Math.round(num($('#dupN').value)||1)));closeModal();let ok=0;
+    for(let i=1;i<=n;i++){const c=clone(p);c.id=uid();c.title=p.title+' ('+(i+1)+')';c.photos=[];c.created=Date.now()+i;c.updated=Date.now();if(c.status!=='Not for sale')c.status='Not for sale';try{await putPiece(c);ok++}catch(e){saveErr(e);break}}
+    toast(ok+' cop'+(ok===1?'y':'ies')+' made');render()},
+  bulk:what=>{if(!sel.size)return toast('Select some pieces first');
+    const field=what==='stage'?`<select id="bk_v">${opts(stages(),stages()[0])}</select>`:what==='status'?`<select id="bk_v">${opts(STATUSES,'Not for sale')}</select>`:`<input type="text" id="bk_v" list="dl_location">`;
+    modal(`<h3>Set ${what} for ${sel.size} piece${sel.size===1?'':'s'}</h3><label>${what[0].toUpperCase()+what.slice(1)}${field}</label><div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="bulkgo" data-id="${what}">Apply</button></div>`)},
+  bulkgo:async what=>{const v=$('#bk_v').value.trim();if(!v)return;closeModal();let n=0;
+    for(const id of sel){const p=S.pieces.find(x=>x.id===id);if(!p)continue;const c=clone(p);if(what==='stage'){c.stage=v;c.log[v]={...(c.log[v]||{}),date:(c.log[v]&&c.log[v].date)||today()}}else c[what]=v;c.updated=Date.now();try{await putPiece(c);n++}catch(e){}}
+    if(what==='location'&&!lib('location').some(x=>x.name.toLowerCase()===v.toLowerCase())){const s=clone(S.settings);s.lib.location.push({id:uid(),name:v});try{await putSettings(s)}catch(e){}}
+    toast(n+' updated');selectMode=false;sel.clear();render()},
+  closemodal:()=>closeModal(),
+  showcase:id=>{const p=S.pieces.find(x=>x.id===id);if(!p)return;const f=ordered(p),last=f.length?p.log[f[f.length-1]]:{};
+    modal(`<div class="show">${coverPhoto(p)?`<img src="${esc(safeSrc(coverPhoto(p).src))}" alt="">`:''}<h3 style="font-size:28px">${esc(p.title)}</h3>
+     <p class="hint">${esc([p.form,p.forming,p.clay].filter(Boolean).join(' · '))}</p>
+     <p>${esc([num(last.h)!=null?'Height '+fl(num(last.h)):'',num(last.w)!=null?'Width '+fl(num(last.w)):'',lastVal(p,'weight')!=null?fw(lastVal(p,'weight')):''].filter(Boolean).join(' · '))}</p>
+     ${p.layers.length?`<p>${p.layers.map(l=>esc((l.name||KC[l.kind][1])+(l.area?' ('+l.area.toLowerCase()+')':''))).join(', ')}</p>`:''}
+     <div class="mact"><button class="btn" data-act="closemodal">Close</button></div></div>`)},
+  car:d=>{const c=$('#car');if(c)c.scrollBy({left:c.clientWidth*(+d),behavior:'smooth'})},
+  edstage:()=>listPicker('Current Stage',null,ed.stage,stages(),v=>{ed.stage=v;E();renderEd()},{noAdd:true,noClear:true}),
+  edloc:()=>listPicker('Location','location',E().location||'',sortedLib('location'),v=>{E().location=v;ed.location=v;renderStageCard()}),
+  edforming:()=>listPicker('Forming Method','forming',ed.forming,sortedLib('forming'),v=>{ed.forming=v;renderAbout()}),
+  edform:()=>listPicker('Form','form',ed.form,sortedLib('form'),v=>{ed.form=v;renderAbout()}),
+  edclay:()=>listPicker('Clay Body','clay',ed.clay,sortedLib('clay'),v=>{ed.clay=v;renderAbout();renderXs()}),
+  edstatus:()=>listPicker('Status',null,ed.status,STATUSES.filter(s=>s!=='Archived'||ed.status==='Archived'),v=>{ed.status=v;renderStatusList()},{noAdd:true,noClear:true}),
+  ainame:()=>aiName(),
+  ainamepick:n=>{ed.title=n;const t=$('#sheetTitle');if(t)t.value=n;toast('Named “'+n+'”')},
+  crop:i=>openCrop(i),
+  cropar:(v,t)=>{$$('.cropar button').forEach(b=>b.setAttribute('aria-pressed',b===t?'true':'false'));setCropAr(+v)},
+  cropreset:()=>{if(!crop)return;crop.ar=0;crop.box={x:0,y:0,w:crop.NW,h:crop.NH};$$('.cropar button').forEach((b,i)=>b.setAttribute('aria-pressed',i?'false':'true'));drawCrop()},
+  cropapply:()=>applyCrop(),
+  pkset:v=>{const cb=pickCb;closeModal();if(cb)cb(v||'')},
+  pkadd:async()=>{const v=$('#pk_q').value.trim();if(!v)return;const cb=pickCb;
+    if(pickCat&&!lib(pickCat).some(x=>x.name.toLowerCase()===v.toLowerCase())){const s=clone(S.settings);s.lib[pickCat].push({id:uid(),name:v});try{await putSettings(s)}catch(e){}}
+    closeModal();if(cb)cb(v)},
+  edweight:()=>{const e=E();modal(`<h3>Weight</h3><p class="hint">At this stage (${esc(ed.stage)}).</p><label>Weight <small>${wu()}</small><input type="number" inputmode="decimal" min="0" id="m_w" value="${outW(num(e.weight))}"></label><div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="wsave">Done</button></div>`)},
+  wsave:()=>{E().weight=inW($('#m_w').value);closeModal();renderAbout()},
+  eddims:()=>{const e=E();modal(`<h3>Dimensions</h3><p class="hint">At this stage (${esc(ed.stage)}), in ${lu()}.</p><div class="row"><label>Width<input type="number" inputmode="decimal" min="0" id="m_dw" value="${outL(num(e.w))}"></label><label>Length<input type="number" inputmode="decimal" min="0" id="m_dl" value="${outL(num(e.l))}"></label><label>Height<input type="number" inputmode="decimal" min="0" id="m_dh" value="${outL(num(e.h))}"></label></div><div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn pri" data-act="dsave">Done</button></div>`)},
+  dsave:()=>{const e=E();e.w=inL($('#m_dw').value);e.l=inL($('#m_dl').value);e.h=inL($('#m_dh').value);closeModal();renderAbout()},
+  edfiring:()=>{const f=E().firing||{};modal(`<h3>Firing</h3><p class="hint">For this stage (${esc(ed.stage)}). Use Settings → Firing Log to log a whole kiln load.</p><label>Type<select id="m_ft">${opts(FTYPES,f.type||'Bisque')}</select></label><div class="row"><label>Cone<input type="text" id="m_fc" value="${esc(f.cone||'')}" placeholder="e.g. 06"></label><label>Top temperature<input type="text" id="m_fp" value="${esc(f.temp||'')}" placeholder="e.g. 1000 °C"></label></div><div class="mact"><button class="btn" data-act="fclear">Clear</button><button class="btn pri" data-act="fsave">Done</button></div>`)},
+  fsave:()=>{E().firing={type:$('#m_ft').value,cone:$('#m_fc').value.trim(),temp:$('#m_fp').value.trim()};closeModal();renderAbout()},
+  fclear:()=>{delete E().firing;closeModal();renderAbout()},
+  curpick:()=>{const L=['HUF','EUR','USD','GBP','CHF','CZK','PLN','RON'];modal(`<h3>Currency</h3><div class="qa">${L.map(c=>`<button class="${c===S.settings.cur?'on':''}" data-act="setcur" data-id="${c}">${c}${c===S.settings.cur?' ✓':''}</button>`).join('')}</div><div class="mact"><button class="btn" data-act="closemodal">Close</button></div>`)},
+  setcur:c=>{const s=clone(S.settings);s.cur=c;closeModal();putSettings(s).then(render,saveErr)},
+  addlayer:kind=>{ed.layers.push({id:uid(),kind,name:'',coats:kind==='glaze'?2:1,method:'',area:'',dip:null,note:'',color:KC[kind][2]});renderLayers();const ins=$$('#layersBox [data-k=name]');if(ins.length){ins[ins.length-1].focus({preventScroll:true});ins[ins.length-1].closest('.layer').scrollIntoView({block:'center',behavior:'smooth'})}},
+  lup:i=>{i=+i;const L=ed.layers;if(i>0){[L[i-1],L[i]]=[L[i],L[i-1]];renderLayers()}},
+  ldown:i=>{i=+i;const L=ed.layers;if(i<L.length-1){[L[i+1],L[i]]=[L[i],L[i+1]];renderLayers()}},
+  lrm:i=>{ed.layers.splice(+i,1);renderLayers()},
+  lplus:(i,t)=>{const l=ed.layers[+i];l.coats=Math.min(9,(+l.coats||1)+1);t.parentNode.querySelector('output').textContent=l.coats;renderXs()},
+  lminus:(i,t)=>{const l=ed.layers[+i];l.coats=Math.max(1,(+l.coats||1)-1);t.parentNode.querySelector('output').textContent=l.coats;renderXs()},
+  rmph:i=>{const [p]=ed.photos.splice(+i,1);if(p&&p.aid)removedAssets.push(p.aid);renderPhotos()},
+  newfiring:()=>openFiring(null),
+  editfiring:id=>{const f=S.firings.find(x=>x.id===id);if(f)openFiring(f)},
+  savefiring:()=>saveFiring(),
+  delfiring:async(id,t)=>{if(armed!==t){armed=t;t.textContent='Tap again to delete';return}try{await delFiring(id);toast('Firing deleted');closeSheet()}catch(e){toast('Could not delete')}},
+  newmat:()=>matEditor(null),
+  editmat:id=>{if(String(id).startsWith('v:')){const n=id.slice(2),u=usage(matCat,n),l=KC[matCat]&&u[0]&&u[0].layers.find(x=>x.name===n);matEditor(null,{name:n,color:l&&l.color})}else matEditor(lib(matCat).find(x=>x.id===id))},
+  savemat:()=>saveMat(),
+  hidemat:async id=>{const s=clone(S.settings);const it=s.lib[matCat].find(x=>x.id===id);if(!it)return;it.hidden=!it.hidden;try{await putSettings(s);closeModal();toast(it.hidden?'Hidden from lists':'Restored');render()}catch(e){saveErr(e)}},
+  unit:k=>{const o=k==='d'?[['cm','cm (centimetres)'],['in','in (inches)']]:[['g','g (grams)'],['oz','oz (ounces)']];const cur=k==='d'?S.settings.dUnit:S.settings.wUnit;
+    modal(`<h3>${k==='d'?'Dimensions unit':'Weight unit'}</h3><div class="qa">${o.map(([v,l])=>`<button class="${v===cur?'on':''}" data-act="setunit" data-id="${k}:${v}">${l}${v===cur?' ✓':''}</button>`).join('')}</div><div class="mact"><button class="btn" data-act="closemodal">Close</button></div>`)},
+  setunit:kv=>{const [k,v]=kv.split(':');const s=clone(S.settings);if(k==='d')s.dUnit=v;else s.wUnit=v;closeModal();putSettings(s).then(render,saveErr)},
+  stedit:()=>{stEdit=!stEdit;render()},
+  stup:i=>moveStage(+i,-1),stdown:i=>moveStage(+i,1),
+  stdel:async i=>{i=+i;const name=stages()[i],n=S.pieces.filter(p=>p.stage===name).length;if(n)return toast(n+' piece'+(n===1?' is':'s are')+' in '+name+'. Move them first.');if(stages().length<2)return;const s=clone(S.settings);s.stages.splice(i,1);try{await putSettings(s);render()}catch(e){saveErr(e)}},
+  stadd:async()=>{const v=$('#newStage').value.trim();if(!v||stages().includes(v))return;const s=clone(S.settings);s.stages.push(v);try{await putSettings(s);render()}catch(e){saveErr(e)}},
+  bkcopy:async()=>{try{await navigator.clipboard.writeText($('#bkText').value);toast('Copied')}catch(e){$('#bkText').select();toast('Select all and copy')}},
+  bkload:()=>restore(),
+  migrate:()=>migrate(),
+  logout:async()=>{try{await sb.auth.signOut()}catch(e){}location.reload()},
+  acct:()=>{},
+  bkdl:()=>{const t=$('#bkText').value,b=new Blob([t],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pottery-log-backup-'+today()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+};
+async function moveStage(i,d){const s=clone(S.settings),j=i+d;if(j<0||j>=s.stages.length)return;[s.stages[i],s.stages[j]]=[s.stages[j],s.stages[i]];try{await putSettings(s);render()}catch(e){saveErr(e)}}
+async function renameStage(i,v){const old=stages()[i];v=v.trim();if(!v||v===old)return;if(stages().includes(v)){toast('That stage already exists');render();return}
+  const s=clone(S.settings);s.stages[i]=v;try{await putSettings(s)}catch(e){return saveErr(e)}
+  if(collapsed.has(old)){collapsed.delete(old);collapsed.add(v);lsSet('collapsed',[...collapsed])}
+  for(const p of S.pieces.filter(p=>p.stage===old||(p.log&&p.log[old]))){const n=clone(p);if(n.stage===old)n.stage=v;if(n.log[old]){n.log[v]=n.log[old];delete n.log[old]}try{await putPiece(n)}catch(e){}}
+  toast('Renamed to '+v);render()}
+async function saveMat(){
+  const id=$('#me_id').value,name=$('#me_name').value.trim();if(!name)return toast('Give it a name');
+  const s=clone(S.settings),list=s.lib[matCat];
+  if(list.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase()))return toast('That name already exists');
+  let it=list.find(x=>x.id===id);const old=it?it.name:($('#me_old').value||null);
+  if(!it){it={id:uid()};list.push(it)}
+  it.name=name;it.notes=$('#me_notes').value.trim();if($('#me_brand'))it.brand=$('#me_brand').value.trim();if($('#me_color'))it.color=$('#me_color').value;
+  try{await putSettings(s)}catch(e){return saveErr(e)}
+  closeModal();
+  if(old){const eq=v=>String(v||'').toLowerCase()===String(old).toLowerCase();
+    for(const p of usage(matCat,old)){const n=clone(p);
+      if(KC[matCat])n.layers.forEach(l=>{if(l.kind===matCat&&eq(l.name)){l.name=name;if(it.color)l.color=it.color}});
+      else if(matCat==='area'||matCat==='method')n.layers.forEach(l=>{if(eq(l[matCat]))l[matCat]=name});
+      else if(matCat==='location'){if(eq(n.location))n.location=name;Object.values(n.log).forEach(e=>{if(e&&eq(e.location))e.location=name})}
+      else if(eq(n[matCat]))n[matCat]=name;
+      if(JSON.stringify(n)!==JSON.stringify(p))try{await putPiece(n)}catch(e){}}}
+  toast('Saved');render()}
+async function restore(){
+  let d;try{d=JSON.parse($('#bkText').value)}catch(e){return toast('That text is not a valid backup')}
+  const ps=Array.isArray(d)?d:d.pieces||[],fs=d.firings||[];let n=0;
+  if(d.settings){const inc=fixSettings(d.settings),s=clone(S.settings);let ch=false;
+    for(const [c] of CATS)for(const x of inc.lib[c])if(!s.lib[c].some(y=>y.name.toLowerCase()===x.name.toLowerCase())){s.lib[c].push(x);ch=true}
+    for(const st of inc.stages)if(!s.stages.includes(st)){s.stages.push(st);ch=true}
+    if(ch)try{await putSettings(s)}catch(e){}}
+  let k=0;for(const raw of ps){k++;toast('Restoring '+k+' of '+ps.length+'…');if(!raw||typeof raw!=='object'||!raw.id)continue;const p=normPiece(raw);p.id=String(p.id).replace(/[^A-Za-z0-9_\-]/g,'').slice(0,60)||uid();if(S.pieces.some(x=>x.id===p.id))continue;
+    if(cloud&&assets){const out=[];for(const x of p.photos){try{const s=String(x.src||'');let b=null;if(s.startsWith('data:'))b=dataToBlob(s);else if(s.startsWith('https://')){const r=await fetch(s);if(r.ok)b=await r.blob()}if(b){const np=await storePhoto(b);if(x.stage)np.stage=x.stage;out.push(np)}}catch(e){}}p.photos=out}
+    try{await putPiece(p);n++}catch(e){saveErr(e);break}}
+  for(const raw of fs){if(!raw||!raw.id)continue;const f={...raw,id:String(raw.id).replace(/[^A-Za-z0-9_\-]/g,'').slice(0,60)||uid(),pieceIds:Array.isArray(raw.pieceIds)?raw.pieceIds.map(String):[]};if(S.firings.some(x=>x.id===f.id))continue;try{await putFiring(f);n++}catch(e){}}
+  toast(n?n+' item'+(n===1?'':'s')+' restored':'Nothing new to restore');render()}
+async function migrate(){
+  const b=$('[data-act=migrate]');if(b){b.disabled=true;b.textContent='Moving…'}
+  const lp=lsGet('pieces',[]).map(normPiece),lf=lsGet('firings',[]),ls=lsGet('settings',null);let n=0;
+  if(ls){const inc=fixSettings(ls),s=clone(S.settings);for(const [c] of CATS)for(const x of inc.lib[c])if(!s.lib[c].some(y=>y.name.toLowerCase()===x.name.toLowerCase()))s.lib[c].push(x);for(const st of inc.stages)if(!s.stages.includes(st))s.stages.push(st);try{await putSettings(s);lsDel('settings')}catch(e){}}
+  for(const p of lp){try{const out=[];for(const x of p.photos){if(String(x.src).startsWith('data:')){if(assets)out.push(await storePhoto(dataToBlob(x.src)))}else out.push(x)}
+    await db.collection('pieces').doc(p.id).set({...p,photos:out});n++;lsSet('pieces',lsGet('pieces',[]).filter(y=>String(y.id)!==p.id))}catch(e){}}
+  for(const f of lf){try{await db.collection('firings').doc(String(f.id)).set(f);n++;lsSet('firings',lsGet('firings',[]).filter(y=>y.id!==f.id))}catch(e){}}
+  toast(n+' moved to your account');render()}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');if(!t)return;
+  if(suppress){suppress=false;e.preventDefault();return}
+  e.preventDefault();
+  const f=A[t.dataset.act];if(f)f(t.dataset.id,t,e);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if($('#modal').classList.contains('open'))closeModal();else if(sheet)sheet.mode==='edit'?A.canceledit():closeSheet();else if(page)A.back()}
+  if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('prow')){e.preventDefault();A.open(e.target.dataset.id)}
+  if(sheet&&sheet.mode==='detail'&&!$('#modal').classList.contains('open')&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))A.car(e.key==='ArrowLeft'?-1:1);
+});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&Date.now()-cropDragEnd>400)closeModal()});
+$('#modal').addEventListener('input',e=>{if(e.target.id!=='pk_q')return;const v=e.target.value.trim(),lv=v.toLowerCase();let exact=false;
+  $$('#pk_list [data-n]').forEach(b=>{const m=b.dataset.n.includes(lv);b.hidden=!m;if(b.dataset.n===lv)exact=true});
+  $('#pk_add').innerHTML=v&&!exact?`<button class="btn pri" style="width:100%" data-act="pkadd">Add “${esc(v)}”</button>`:''});
+$('#modal').addEventListener('keydown',e=>{if(e.target.id==='pk_q'&&e.key==='Enter'){e.preventDefault();const b=$('#pk_add [data-act=pkadd]');if(b)b.click();else{const f=$$('#pk_list [data-n]').find(x=>!x.hidden);if(f)f.click()}}});
+let lpT=null,lpX=0,lpY=0;
+document.addEventListener('pointerdown',e=>{const c=e.target.closest('.prow');if(!c||selectMode)return;lpX=e.clientX;lpY=e.clientY;clearTimeout(lpT);
+  lpT=setTimeout(()=>{suppress=true;setTimeout(()=>suppress=false,800);quick(c.dataset.id)},550)});
+document.addEventListener('pointermove',e=>{if(lpT&&Math.hypot(e.clientX-lpX,e.clientY-lpY)>8){clearTimeout(lpT);lpT=null}});
+['pointerup','pointercancel','scroll'].forEach(ev=>document.addEventListener(ev,()=>{clearTimeout(lpT);lpT=null},true));
+document.addEventListener('contextmenu',e=>{const c=e.target.closest('.prow');if(!c||selectMode)return;e.preventDefault();if(!$('#modal').classList.contains('open'))quick(c.dataset.id)});
+
+$('#main').addEventListener('input',e=>{const t=e.target;
+  if(t.id==='q'){q=t.value.trim().toLowerCase();$('#res').innerHTML=sResults()}
+  else if(['c_a','c_b','c_t','c_p'].includes(t.id))calc()});
+$('#main').addEventListener('change',e=>{const t=e.target;if(t.dataset.stage!=null)renameStage(+t.dataset.stage,t.value)});
+$('#sheet').addEventListener('input',e=>{const t=e.target;
+  if(t.id==='edDate'&&ed){E().date=t.value;renderStageCard();return}
+  if(sheet&&sheet.mode==='edit'&&ed){
+    if(t.dataset.f){ed[t.dataset.f]=t.value}
+    else if(t.dataset.l){const st=t.closest('.logrow').dataset.st,k=t.dataset.l,o=ed.log[st]=ed.log[st]||{};o[k]=k==='weight'?inW(t.value):k==='h'||k==='w'?inL(t.value):t.value}
+    else if(t.dataset.k){const box=t.closest('.layer'),l=ed.layers[+box.dataset.i],k=t.dataset.k;
+      if(k==='kind'){l.kind=t.value;if(!l.colorSet)l.color=libColor(l.kind,l.name)||KC[l.kind][2];renderLayers();return}
+      l[k]=t.value;
+      if(k==='color')l.colorSet=true;
+      if(k==='name'){const c=libColor(l.kind,t.value);if(c){l.color=c;box.querySelector('[data-k=color]').value=c}}
+      if(k==='color'||k==='name'||k==='area')renderXs()}}
+  if(sheet&&sheet.mode==='firing'&&fe&&t.dataset.ff){fe[t.dataset.ff]=t.value;if(t.dataset.ff==='type'){const m=pickStage(t.value);if(m&&$('#fmoveTo'))$('#fmoveTo').value=m}}
+});
+$('#main').addEventListener('change',async e=>{if(e.target.id!=='bkFile')return;const f=e.target.files[0];if(!f)return;try{$('#bkText').value=await f.text();toast('File loaded. Tap Restore.')}catch(err){toast('Could not read that file')}});
+$('#sheet').addEventListener('change',async e=>{const t=e.target;
+  if(t.dataset.phst!=null&&ed){const ph=ed.photos[+t.dataset.phst];if(ph){if(t.value)ph.stage=t.value;else delete ph.stage}return}
+  if(sheet&&sheet.mode==='firing'&&fe&&t.dataset.pick){const id=t.dataset.pick;fe.pieceIds=t.checked?[...new Set([...fe.pieceIds,id])]:fe.pieceIds.filter(x=>x!==id)}
+  if(t.id==='phIn'&&ed){const files=[...t.files];if(!files.length)return;busy=true;renderPhotos();
+    for(const f of files){try{const b=await shrinkImg(f,cloud&&assets?1600:1000);if(ed){const np=await storePhoto(b);np.stage=ed.stage;ed.photos.push(np)}}catch(err){toast(err.message==='read'?'That image format could not be read':'A photo could not be saved')}}
+    busy=false;if(ed){renderPhotos();if(files.length===1&&ed.photos.length)openCrop(ed.photos.length-1)}}});
+
+/* ---------- start ---------- */
+const SB_URL='https://bevwgmlsgbvgnptinisy.supabase.co',SB_KEY='sb_publishable_93xtMcG6Lea4Qz5rzJEJEg_CkAdXb5z';
+const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const URL_TTL=60*60*24*7;
+let me=null,started=false,recovering=/type=recovery/.test(location.hash);
+const nowIso=()=>new Date().toISOString();
+const sbErr=e=>{const x=new Error(e&&e.message||'save');x.code=e&&/quota|exceed|too large/i.test(e.message||'')?'quota_exceeded':e&&e.code;return x};
+
+/* signed links for private photos (they expire, so they are made fresh on every load) */
+async function signUrls(list){
+  const paths=[...new Set(list.filter(x=>x&&x.aid&&String(x.aid).startsWith(me.id+'/')).map(x=>x.aid))];if(!paths.length)return;
+  const map={};
+  for(let i=0;i<paths.length;i+=100){const {data,error}=await sb.storage.from('photos').createSignedUrls(paths.slice(i,i+100),URL_TTL);
+    if(!error&&data)data.forEach(d=>{if(d&&d.signedUrl&&d.path)map[d.path]=d.signedUrl})}
+  list.forEach(x=>{if(x&&x.aid&&map[x.aid])x.src=map[x.aid]})}
+const stripSrc=o=>Array.isArray(o.photos)?{...o,photos:o.photos.map(ph=>ph&&ph.aid?{...ph,src:''}:ph)}:o;
+
+/* the app's storage calls, backed by Supabase */
+const refreshers=[];
+function watch(get,cb,err){const run=async()=>{try{cb(await get())}catch(e){err&&err(e)}};refreshers.push(run);run();return()=>{}}
+function mkDb(){
+  return{
+    collection(t){const get=async()=>{const {data,error}=await sb.from(t).select('id,data');if(error)throw error;
+        if(t==='pieces')await signUrls(data.flatMap(r=>(r.data&&r.data.photos)||[]));
+        return{docs:data.map(r=>({id:r.id,data:()=>r.data||{}})),metadata:{fromCache:false}}};
+      return{
+        doc:id=>({
+          set:async obj=>{const {error}=await sb.from(t).upsert({id,data:stripSrc(obj),updated_at:nowIso()});if(error)throw sbErr(error)},
+          delete:async()=>{const {error}=await sb.from(t).delete().eq('id',id);if(error)throw sbErr(error)}}),
+        get,
+        onSnapshot:(cb,err)=>watch(get,cb,err)}},
+    doc(){const get=async()=>{const {data,error}=await sb.from('settings').select('data').maybeSingle();if(error)throw error;return{exists:!!data,data:()=>data&&data.data}};
+      return{
+        set:async s=>{const {error}=await sb.from('settings').upsert({user_id:me.id,data:s,updated_at:nowIso()});if(error)throw sbErr(error)},
+        get,
+        onSnapshot:(cb,err)=>watch(get,cb,err)}}}}
+const mkAssets=()=>({
+  upload:async blob=>{const path=me.id+'/'+uid()+'.jpg';
+    const {error}=await sb.storage.from('photos').upload(path,blob,{contentType:blob.type||'image/jpeg',upsert:false});if(error)throw sbErr(error);
+    const {data}=await sb.storage.from('photos').createSignedUrl(path,URL_TTL);return{id:path,url:data&&data.signedUrl}},
+  delete:async id=>{if(String(id).startsWith(me.id+'/'))await sb.storage.from('photos').remove([id])}});
+
+/* ---------- login ---------- */
+const here=()=>location.origin+location.pathname;
+function authMsg(m){const map={'Invalid login credentials':'Wrong email or password.','Email not confirmed':'Confirm your email first: open the link we sent you.','User already registered':'There is already an account with this email. Log in instead.'};
+  if(/rate limit/i.test(m||''))return 'Too many emails were sent just now. Wait a while and try again.';
+  if(/at least 6|should be at least/i.test(m||''))return 'Use a password with at least 8 characters.';
+  return map[m]||m||'Something went wrong. Try again.'}
+function authView(mode,note){
+  $('#auth').classList.add('on');
+  const f=(id,lab,type,ac)=>`<label>${lab}<input type="${type}" id="${id}" autocomplete="${ac}" ${type==='email'?'inputmode="email" autocapitalize="off" spellcheck="false"':''} required></label>`;
+  const head=`<div>${pot(64).replace('rgba(255,255,255,.45)','var(--clay)')}</div><h1 id="authTitle">Pottery Log</h1>`;
+  let body='';
+  if(mode==='login')body=`<p class="sub">Log every piece: photos, weights, glazes and stages.</p>
+    <form class="panel" data-am="login">${f('aEmail','Email','email','username')}${f('aPw','Password','password','current-password')}<div class="err" id="aErr"></div><button class="btn pri" type="submit">Log in</button></form>
+    <div class="row2"><button class="lnk" type="button" data-am="go" data-to="forgot">Forgot password?</button><button class="lnk" type="button" data-am="go" data-to="signup">Create an account</button></div>`;
+  else if(mode==='signup')body=`<p class="sub">Make your own free log. Only you will see your pieces.</p>
+    <form class="panel" data-am="signup">${f('aEmail','Email','email','username')}<label>Password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><div class="err" id="aErr"></div><button class="btn pri" type="submit">Create account</button></form>
+    <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">I already have an account</button></div>`;
+  else if(mode==='forgot')body=`<p class="sub">We’ll email you a link to set a new password.</p>
+    <form class="panel" data-am="forgot">${f('aEmail','Email','email','username')}<div class="err" id="aErr"></div><button class="btn pri" type="submit">Send link</button></form>
+    <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">Back to log in</button></div>`;
+  else if(mode==='newpw')body=`<p class="sub">Choose a new password.</p>
+    <form class="panel" data-am="newpw"><label>New password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><div class="err" id="aErr"></div><button class="btn pri" type="submit">Save password</button></form>`;
+  else if(mode==='check')body=`<div class="panel"><p style="margin:0">${esc(note||'')}</p></div>
+    <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">Back to log in</button></div>`;
+  else if(mode==='down')body=`<div class="panel"><p style="margin:0">Pottery Log could not load. Check your internet connection and reload the page.</p></div>`;
+  $('#authBox').innerHTML=head+body;
+  const first=$('#authBox input');if(first&&matchMedia('(pointer:fine)').matches)first.focus()}
+$('#auth').addEventListener('click',e=>{const b=e.target.closest('[data-am=go]');if(b){e.preventDefault();authView(b.dataset.to)}});
+$('#auth').addEventListener('submit',async e=>{
+  e.preventDefault();const form=e.target,mode=form.dataset.am,btn=form.querySelector('button[type=submit]'),err=$('#aErr');
+  const email=($('#aEmail')&&$('#aEmail').value||'').trim(),pw=$('#aPw')&&$('#aPw').value||'';
+  if((mode==='signup'||mode==='newpw')&&pw.length<8){err.textContent='Use a password with at least 8 characters.';return}
+  btn.disabled=true;err.textContent='';
+  try{
+    if(mode==='login'){const {error}=await sb.auth.signInWithPassword({email,password:pw});if(error)throw error}
+    else if(mode==='signup'){const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:here()}});if(error)throw error;
+      if(!data.session)authView('check','Almost done: we sent a link to '+email+'. Open it on this device to confirm your email, then log in.')}
+    else if(mode==='forgot'){const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:here()});if(error)throw error;
+      authView('check','If there is an account for '+email+', a link to set a new password is on its way. Open it on this device.')}
+    else if(mode==='newpw'){const {data,error}=await sb.auth.updateUser({password:pw});if(error)throw error;recovering=false;toast('Password saved');
+      history.replaceState(null,'',here());if(data&&data.user)startApp(data.user)}
+  }catch(x){if(err)err.textContent=authMsg(x&&x.message)}
+  finally{if(btn&&document.contains(btn))btn.disabled=false}});
+
+/* ---------- open the log ---------- */
+function startApp(user){
+  if(started)return;started=true;me=user;userEmail=user.email||'';
+  $('#auth').classList.remove('on');
+  db=mkDb();assets=mkAssets();cloud=true;
+  S.settings=fixSettings(null);S.pieces=[];S.firings=[];setStatus(false,'Loading your log…');render();
+  const timer=setTimeout(()=>setStatus(false,'Still loading… check your connection'),10000);
+  const busyUI=()=>sheet&&sheet.mode!=='detail';
+  const fixF=d=>({...d.data(),id:d.id,pieceIds:Array.isArray(d.data().pieceIds)?d.data().pieceIds:[]});
+  db.doc('meta/settings').onSnapshot(d=>{if(d.exists){S.settings=fixSettings(d.data());S.pieces=S.pieces.map(normPiece)}if(!busyUI())render()},()=>{});
+  db.collection('firings').onSnapshot(snap=>{S.firings=snap.docs.map(fixF);if(!busyUI())render()},()=>{});
+  db.collection('pieces').onSnapshot(snap=>{clearTimeout(timer);
+    S.pieces=snap.docs.map(d=>normPiece({...d.data(),id:d.id}));
+    setStatus(true,'Synced to your account');if(!busyUI())render()},
+    ()=>{clearTimeout(timer);setStatus(false,'Could not load your log. Check your connection and reload.')});
+  /* pick up changes made on another device when you come back to the app */
+  let lastRefresh=Date.now();
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!busyUI()&&Date.now()-lastRefresh>20000){lastRefresh=Date.now();refreshers.forEach(r=>r())}});
+}
+
+if(!sb)authView('down');
+else{
+  sb.auth.onAuthStateChange((ev,session)=>{
+    if(ev==='PASSWORD_RECOVERY'||(recovering&&session)){recovering=true;setTimeout(()=>authView('newpw'),0);return}
+    if(session&&session.user&&!recovering){const u=session.user;setTimeout(()=>startApp(u),0);return}
+    if(!session&&started){location.reload();return}
+    if(!session&&ev==='INITIAL_SESSION')setTimeout(()=>authView('login'),0)});
+}
+}
+</script>
+</body>
+</html>
