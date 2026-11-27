@@ -266,6 +266,7 @@ input[type=email],input[type=password]{min-height:44px;border:0;border-radius:10
 .auth .msg{color:var(--ok);font-size:14px}
 .auth .row2{display:flex;justify-content:space-between;flex-wrap:wrap}
 .auth .box>div:first-child{text-align:center}
+.auth .agree{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--mute);margin-top:4px}.auth .agree input{width:22px;height:22px;flex:none;margin:0}.auth .agree a{color:var(--acc)}
 .dinfo p{margin:0 0 6px}.dinfo ul{margin:0;padding-left:18px;display:grid;gap:6px}.dinfo b{color:var(--ink);font-weight:600}
 </style>
 </head>
@@ -375,7 +376,7 @@ const HU={
 'and they all go to Drive.':'gombra, és mind felkerülnek a Drive-ra.',
 'Pieces and photos you delete in the app stay in Drive, because it’s a backup. Delete them in Drive yourself if you want them gone.':'Az appban törölt darabok és fotók a Drive-on maradnak, mert ez egy biztonsági mentés. Ha nem kellenek, töröld őket a Drive-ban.',
 'Pottery Log can only see the files it made itself, never anything else in your Drive.':'A Pottery Log csak az általa létrehozott fájlokat látja, a Drive-od többi részét soha.',
-'Privacy policy':'Adatvédelem','Drive is up to date':'A Drive naprakész','Backup stopped':'A mentés megszakadt',
+'Privacy policy':'Adatvédelmi tájékoztató','Drive is up to date':'A Drive naprakész','Backup stopped':'A mentés megszakadt',
 'Drive disconnected. Your Drive files stay where they are.':'Drive leválasztva. A fájljaid a Drive-on maradnak.',
 'Google asked you to reconnect. Tap Back up now.':'A Google újracsatlakozást kér. Koppints a Mentés most gombra.',
 'Some pieces were not backed up. Tap Back up now to try again.':'Néhány darab mentése nem sikerült. Koppints a Mentés most gombra.',
@@ -399,6 +400,15 @@ const HU={
 'This text holds all your pieces, firings and lists. Copy it into a note or an email to yourself.':'Ez a szöveg tartalmazza az összes darabod, égetésed és listád. Másold be egy jegyzetbe, vagy küldd el magadnak e-mailben.',
 'Paste a backup here and tap Restore. Anything already in your log is kept; only missing pieces, firings and list entries are added.':'Illessz be ide egy mentést, és koppints a Visszaállításra. Ami már a naplódban van, megmarad; csak a hiányzó darabok, égetések és listaelemek kerülnek hozzá.',
 'Tap':'Koppints a','to log your first piece: photos, weight, and every glaze layer with its coats.':'gombra az első darabod rögzítéséhez: fotók, tömeg és minden mázréteg a rétegszámmal.',
+'Before naming with AI':'Mielőtt az AI elnevezi','Agree and continue':'Elfogadom és folytatom','Delete my account':'Fiókom törlése','Delete your account?':'Törlöd a fiókodat?','Delete everything':'Minden törlése','Deleting…':'Törlés…',
+'To suggest names, Pottery Log sends small copies of this piece’s photos and its details to Google’s Gemini service.':'A névjavaslatokhoz a Pottery Log elküldi a darab fotóinak kicsinyített másolatát és adatait a Google Gemini szolgáltatásának.',
+'Pottery Log uses Gemini’s free version, so Google may keep what is sent, have people review it, and use it to improve its products. What has been sent cannot be called back.':'A Pottery Log a Gemini ingyenes változatát használja, ezért a Google megőrizheti az elküldött anyagot, emberek is átnézhetik, és felhasználhatja a termékei fejlesztésére. Amit elküldtél, azt nem lehet visszavonni.',
+'Only continue if you are fine with that. You can stop any time by not using this button.':'Csak akkor folytasd, ha ez rendben van számodra. Bármikor abbahagyhatod: egyszerűen ne használd ezt a gombot.',
+'This permanently deletes your login and all your pieces, photos, firings and settings from Pottery Log. It cannot be undone.':'Ez véglegesen törli a fiókodat és az összes darabodat, fotódat, égetésedet és beállításodat a Pottery Logból. Nem vonható vissza.',
+'Copies in your Google Drive and backups you exported are not affected: they are yours to keep or delete.':'A Google Drive-on lévő másolatokat és az általad exportált mentéseket ez nem érinti: azokat te tartod meg vagy törlöd.',
+'Your account and everything in it have been deleted.':'A fiókodat és minden benne lévő adatot töröltük.',
+'Could not delete the account. Try again, or contact the app’s owner.':'Nem sikerült törölni a fiókot. Próbáld újra, vagy írj az app üzemeltetőjének.',
+'I am 18 or older and I have read the':'Elmúltam 18 éves, és elolvastam:','Please confirm that you are 18 or older and have read the Privacy policy.':'Erősítsd meg, hogy elmúltál 18 éves és elolvastad az adatvédelmi tájékoztatót.',
 /* stages, statuses (saved data stays English) */
 'Idea':'Ötlet','Formed':'Formázva','Trimmed':'Esztergálva','Bisqued':'Zsengélve','Glazed':'Mázazva','Finished':'Kész','Wet':'Nedves','Leather hard':'Bőrkemény','Bone dry':'Csontszáraz','Bisque fired':'Zsengélve','Glaze fired':'Mázégetve',
 'Not for sale':'Nem eladó','Available':'Eladó','Sold':'Eladva','Gifted':'Elajándékozva','Traded':'Elcserélve',
@@ -686,7 +696,7 @@ function vSettings(){
   const c=n=>`<span class="cnt">${n}</span>`;
   return `<div class="lt"><h1>Settings</h1></div><div class="status"><span class="dot ${S.on?'on':''}" id="stDot"></span><span id="stTxt">${esc(statusTxt)}</span></div>${banner()}
   <h2 class="gh">Language</h2><div class="group">${grow('lang','','Language',`<span class="val" data-noi18n>${LANG==='hu'?'Magyar':'English'}</span>`)}</div>
-  <h2 class="gh">Account</h2><div class="group">${grow('acct','','Signed in as',`<span class="val">${esc(userEmail)}</span>`)}${grow('logout','','Log out')}</div>${driveGroup()}
+  <h2 class="gh">Account</h2><div class="group">${grow('acct','','Signed in as',`<span class="val">${esc(userEmail)}</span>`)}${grow('logout','','Log out')}${grow('delacct','','<span style="color:var(--danger)">Delete my account</span>')}</div>${driveGroup()}
   <h2 class="gh">Backup</h2><div class="group">${grow('page','backup','Export Backup','','Copy all your data as text')}${grow('page','restore','Import Backup','','Restore data from a previous backup')}</div>
   <h2 class="gh">Studio</h2><div class="group">${grow('page','firings','Firing Log',c(S.firings.length))}${grow('page','shrink','Shrinkage Calculator')}</div>
   <h2 class="gh">Preferences</h2><div class="group">${grow('page','stages','Stages',c(stages().length))}${CATS.map(([k,l])=>grow('cat',k,l,c(libNames(k).length+usedNotInLib(k).length))).join('')}</div>
@@ -1210,11 +1220,12 @@ function authView(mode,note){
   const f=(id,lab,type,ac)=>`<label>${lab}<input type="${type}" id="${id}" autocomplete="${ac}" ${type==='email'?'inputmode="email" autocapitalize="off" spellcheck="false"':''} required></label>`;
   const head=`<div>${pot(64).replace('rgba(255,255,255,.45)','var(--clay)')}</div><h1 id="authTitle">Pottery Log</h1>`;
   let body='';
-  if(mode==='login')body=`<p class="sub">Log every piece: photos, weights, glazes and stages.</p>
+  let gone=false;try{gone=sessionStorage.getItem('pl.deleted')==='1';sessionStorage.removeItem('pl.deleted')}catch(e){}
+  if(mode==='login')body=(gone?'<div class="panel"><p style="margin:0">Your account and everything in it have been deleted.</p></div>':'')+`<p class="sub">Log every piece: photos, weights, glazes and stages.</p>
     <form class="panel" data-am="login">${f('aEmail','Email','email','username')}${f('aPw','Password','password','current-password')}<div class="err" id="aErr"></div><button class="btn pri" type="submit">Log in</button></form>
     <div class="row2"><button class="lnk" type="button" data-am="go" data-to="forgot">Forgot password?</button><button class="lnk" type="button" data-am="go" data-to="signup">Create an account</button></div>`;
   else if(mode==='signup')body=`<p class="sub">Make your own free log. Only you will see your pieces.</p>
-    <form class="panel" data-am="signup">${f('aEmail','Email','email','username')}<label>Password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><div class="err" id="aErr"></div><button class="btn pri" type="submit">Create account</button></form>
+    <form class="panel" data-am="signup">${f('aEmail','Email','email','username')}<label>Password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><label class="agree"><input type="checkbox" id="aAgree"><span>I am 18 or older and I have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a>.</span></label><div class="err" id="aErr"></div><button class="btn pri" type="submit">Create account</button></form>
     <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">I already have an account</button></div>`;
   else if(mode==='forgot')body=`<p class="sub">We’ll email you a link to set a new password.</p>
     <form class="panel" data-am="forgot">${f('aEmail','Email','email','username')}<div class="err" id="aErr"></div><button class="btn pri" type="submit">Send link</button></form>
@@ -1231,6 +1242,7 @@ $('#auth').addEventListener('submit',async e=>{
   e.preventDefault();const form=e.target,mode=form.dataset.am,btn=form.querySelector('button[type=submit]'),err=$('#aErr');
   const email=($('#aEmail')&&$('#aEmail').value||'').trim(),pw=$('#aPw')&&$('#aPw').value||'';
   if((mode==='signup'||mode==='newpw')&&pw.length<8){err.textContent='Use a password with at least 8 characters.';return}
+  if(mode==='signup'&&!$('#aAgree').checked){err.textContent='Please confirm that you are 18 or older and have read the Privacy policy.';return}
   btn.disabled=true;err.textContent='';
   try{
     if(mode==='login'){const {error}=await sb.auth.signInWithPassword({email,password:pw});if(error)throw error}
@@ -1243,13 +1255,31 @@ $('#auth').addEventListener('submit',async e=>{
   }catch(x){if(err)err.textContent=authMsg(x&&x.message)}
   finally{if(btn&&document.contains(btn))btn.disabled=false}});
 
+/* ---------- consent before photos go to Google Gemini ---------- */
+const aiKey=()=>'pottery-log.aiok.'+(me&&me.id);
+let aiResolve=null;
+function aiConsent(){try{if(localStorage.getItem(aiKey())==='1')return Promise.resolve(true)}catch(e){}
+  return new Promise(res=>{aiResolve=res;
+    modal(`<h3>Before naming with AI</h3><p>To suggest names, Pottery Log sends small copies of this piece’s photos and its details to Google’s Gemini service.</p><p>Pottery Log uses Gemini’s free version, so Google may keep what is sent, have people review it, and use it to improve its products. What has been sent cannot be called back.</p><p>Only continue if you are fine with that. You can stop any time by not using this button. <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a></p><div class="mact"><button class="btn" data-act="aino">Cancel</button><button class="btn pri" data-act="aiok">Agree and continue</button></div>`);
+    const mo=new MutationObserver(()=>{if(!$('#modal').classList.contains('open')){mo.disconnect();if(aiResolve){const r=aiResolve;aiResolve=null;r(false)}}});
+    mo.observe($('#modal'),{attributes:true,attributeFilter:['class']})})}
+Object.assign(A,{
+  aiok:()=>{try{localStorage.setItem(aiKey(),'1')}catch(e){}const r=aiResolve;aiResolve=null;closeModal();if(r)r(true)},
+  aino:()=>{const r=aiResolve;aiResolve=null;closeModal();if(r)r(false)},
+  delacct:()=>modal(`<h3>Delete your account?</h3><p>This permanently deletes your login and all your pieces, photos, firings and settings from Pottery Log. It cannot be undone.</p><p>Copies in your Google Drive and backups you exported are not affected: they are yours to keep or delete.</p><div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn del" data-act="delacctgo">Delete everything</button></div>`),
+  delacctgo:async(id,btn)=>{if(btn.disabled)return;btn.disabled=true;btn.textContent='Deleting…';
+    try{const {data,error}=await sb.functions.invoke('delete-account',{body:{}});if(error||!data||!data.ok)throw error||new Error('failed');
+      try{Object.keys(localStorage).filter(k=>k.includes(me.id)).forEach(k=>localStorage.removeItem(k));sessionStorage.setItem('pl.deleted','1')}catch(e){}
+      try{await sb.auth.signOut({scope:'local'})}catch(e){}location.reload()}
+    catch(e){btn.disabled=false;btn.textContent='Delete everything';toast('Could not delete the account. Try again, or contact the app’s owner.')}}});
+
 /* ---------- open the log ---------- */
 function startApp(user){
   if(started)return;started=true;me=user;userEmail=user.email||'';
   $('#auth').classList.remove('on');
   db=mkDb();assets=mkAssets();cloud=true;
   sampleFn={limits:async()=>({images:{maxCount:2}}),
-    json:async(facts,o={})=>{const images=[];for(const b of (o.images||[])){try{const small=await shrinkImg(b,768);images.push((await blobToData(small)).split(',')[1])}catch(e){}}
+    json:async(facts,o={})=>{if(!(await aiConsent())){const x=new Error('cancelled');x.code='cancelled';throw x}const images=[];for(const b of (o.images||[])){try{const small=await shrinkImg(b,768);images.push((await blobToData(small)).split(',')[1])}catch(e){}}
       if(o.signal&&o.signal.aborted){const x=new Error('cancelled');x.code='cancelled';throw x}
       const {data,error}=await sb.functions.invoke('name-piece',{body:{facts,images,lang:LANG}});
       if(o.signal&&o.signal.aborted){const x=new Error('cancelled');x.code='cancelled';throw x}
