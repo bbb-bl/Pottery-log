@@ -267,7 +267,7 @@ input[type=email],input[type=password]{min-height:44px;border:0;border-radius:10
 .auth .row2{display:flex;justify-content:space-between;flex-wrap:wrap}
 .auth .box>div:first-child{text-align:center}
 .auth .agree{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--mute);margin-top:4px}.auth .agree input{width:22px;height:22px;flex:none;margin:0}.auth .agree a{color:var(--acc)}
-.dinfo p{margin:0 0 6px}.dinfo ul{margin:0;padding-left:18px;display:grid;gap:6px}.dinfo b{color:var(--ink);font-weight:600}
+.dinfo p{margin:0 0 6px}.cfts{min-height:0}.cfts:not(:empty){min-height:65px}.dinfo ul{margin:0;padding-left:18px;display:grid;gap:6px}.dinfo b{color:var(--ink);font-weight:600}
 </style>
 </head>
 <body>
@@ -409,6 +409,12 @@ const HU={
 'Your account and everything in it have been deleted.':'A fiókodat és minden benne lévő adatot töröltük.',
 'Could not delete the account. Try again, or contact the app’s owner.':'Nem sikerült törölni a fiókot. Próbáld újra, vagy írj az app üzemeltetőjének.',
 'I am 18 or older and I have read the':'Elmúltam 18 éves, és elolvastam:','Please confirm that you are 18 or older and have read the Privacy policy.':'Erősítsd meg, hogy elmúltál 18 éves és elolvastad az adatvédelmi tájékoztatót.',
+'Terms of use':'Felhasználási feltételek','Wait a moment for the security check to finish, then try again.':'Várj egy pillanatot, amíg a biztonsági ellenőrzés lefut, aztán próbáld újra.',
+'The security check failed. Wait for it to finish and try again.':'A biztonsági ellenőrzés nem sikerült. Várd meg, amíg lefut, és próbáld újra.',
+'Please confirm that you are 18 or older and accept the Terms of use.':'Erősítsd meg, hogy elmúltál 18 éves és elfogadod a felhasználási feltételeket.',
+'You’ve used today’s 20 name suggestions. Try again tomorrow.':'Mára elhasználtad a 20 névjavaslatot. Próbáld újra holnap.',
+'You’re offline. This change was not saved.':'Nincs internetkapcsolat. Ez a módosítás nem mentődött el.',
+'Offline: showing your log from the last time you were online. Changes can’t be saved until you’re back online.':'Offline: a naplódat a legutóbbi online állapot szerint látod. Módosítani csak újra online lehet.',
 /* stages, statuses (saved data stays English) */
 'Idea':'Ötlet','Formed':'Formázva','Trimmed':'Esztergálva','Bisqued':'Zsengélve','Glazed':'Mázazva','Finished':'Kész','Wet':'Nedves','Leather hard':'Bőrkemény','Bone dry':'Csontszáraz','Bisque fired':'Zsengélve','Glaze fired':'Mázégetve',
 'Not for sale':'Nem eladó','Available':'Eladó','Sold':'Eladva','Gifted':'Elajándékozva','Traded':'Elcserélve',
@@ -435,6 +441,7 @@ const HU_RX=[
  [/^Date: Today • (.+)$/,(m,s)=>'Dátum: ma • '+s],
  [/^Date: (.+)$/,(m,s)=>'Dátum: '+s],
  [/^(.+): (\d+)$/,(m,s,n)=>HU[s]?HU[s]+': '+n:null],
+ [/^(\d+) left today$/,(m,n)=>'Ma még '+n],
  [/^(\d+) selected$/,(m,n)=>n+' kijelölve'],
  [/^(\d+) waiting$/,(m,n)=>n+' vár'],
  [/^Last backup (.+)$/,(m,d)=>'Utolsó mentés: '+d],
@@ -615,7 +622,7 @@ async function putFiring(f){const prev=S.firings;const i=prev.findIndex(x=>x.id=
   if(cloud){try{await db.collection('firings').doc(f.id).set(f)}catch(e){S.firings=prev;throw e}}else if(!lsSet('firings',S.firings)){S.firings=prev;throw new Error('full')}}
 async function delFiring(id){S.firings=S.firings.filter(x=>x.id!==id);if(cloud)await db.collection('firings').doc(id).delete();else lsSet('firings',S.firings)}
 async function putSettings(s){S.settings=s;if(cloud)await db.doc('meta/settings').set(s);else lsSet('settings',s)}
-function saveErr(e){toast(e&&e.message==='full'?'This browser is out of space. Remove photos or move pieces to your account.':e&&e.code==='quota_exceeded'?'Your storage for this log is full.':'Could not save. Try again.')}
+function saveErr(e){if(e&&e.code==='offline')return toast('You’re offline. This change was not saved.');toast(e&&e.message==='full'?'This browser is out of space. Remove photos or move pieces to your account.':e&&e.code==='quota_exceeded'?'Your storage for this log is full.':'Could not save. Try again.')}
 
 /* photos */
 function shrinkImg(file,max){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();
@@ -701,7 +708,7 @@ function vSettings(){
   <h2 class="gh">Studio</h2><div class="group">${grow('page','firings','Firing Log',c(S.firings.length))}${grow('page','shrink','Shrinkage Calculator')}</div>
   <h2 class="gh">Preferences</h2><div class="group">${grow('page','stages','Stages',c(stages().length))}${CATS.map(([k,l])=>grow('cat',k,l,c(libNames(k).length+usedNotInLib(k).length))).join('')}</div>
   <h2 class="gh">Units</h2><div class="group">${grow('unit','d','Dimensions unit',`<span class="val">${DU()?'in':'cm'}</span>`)}${grow('unit','w','Weight unit',`<span class="val">${WU()?'oz (ounces)':'g (grams)'}</span>`)}${grow('curpick','','Currency',`<span class="val">${esc(S.settings.cur)}</span>`)}</div>
-  <p class="gfoot">Your pieces and photos are saved to your Pottery Log account. Only you can see them. Log in on any device to see them there.</p>`}
+  <p class="gfoot">Your pieces and photos are saved to your Pottery Log account. Only you can see them. Log in on any device to see them there.</p><p class="gfoot"><a href="terms.html">Terms of use</a> · <a href="privacy.html">Privacy policy</a></p>`}
 
 function nav(title,right=''){return `<div class="subnav"><button class="navb" data-act="back" aria-label="Back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"/></svg></button><h2>${esc(title)}</h2>${right||'<span></span>'}</div>`}
 function vPage(){
@@ -890,9 +897,9 @@ async function aiName(){
   try{const arr=await sampleFn.json(facts,{images:imgs.length?imgs:undefined,modelTier:'quick',cache:false,signal:aiCtl.signal});
     const names=(Array.isArray(arr)?arr:[]).map(x=>String(x).trim()).filter(Boolean).slice(0,6);
     if(!$('#aiOut'))return;
-    $('#aiOut').innerHTML=names.length?names.map(n=>`<button class="aichip" data-act="ainamepick" data-id="${esc(n)}">${esc(n)}</button>`).join('')+'<button class="aichip more" data-act="ainame">More ideas</button>':'<span class="hint">No names came back. Try again.</span>';
+    $('#aiOut').innerHTML=names.length?names.map(n=>`<button class="aichip" data-act="ainamepick" data-id="${esc(n)}">${esc(n)}</button>`).join('')+'<button class="aichip more" data-act="ainame">More ideas</button>'+(aiLeft!=null?'<span class="hint" style="align-self:center">'+aiLeft+' left today</span>':''):'<span class="hint">No names came back. Try again.</span>';
   }catch(err){if(!$('#aiOut'))return;const c=err&&err.code;
-    $('#aiOut').innerHTML=c==='cancelled'?'':`<span class="hint">${c==='not_signed_in'?'Log in again to use naming.':c==='rate_limited'?'Too many requests right now. Try again in a little while.':c==='image_rejected'?'That photo couldn’t be read. Try another one.':'Couldn’t get names. Try again.'}</span>`}
+    $('#aiOut').innerHTML=c==='cancelled'?'':`<span class="hint">${c==='not_signed_in'?'Log in again to use naming.':c==='daily_limit'?'You’ve used today’s 20 name suggestions. Try again tomorrow.':c==='rate_limited'?'Too many requests right now. Try again in a little while.':c==='image_rejected'?'That photo couldn’t be read. Try another one.':'Couldn’t get names. Try again.'}</span>`}
   finally{const b=$('#aiBtn');if(b)b.disabled=false}}
 function listPicker(title,cat,cur,list,cb,o={}){pickCb=cb;pickCat=cat;
   const rows=list.map(v=>`<button class="${v===cur?'on':''}" data-act="pkset" data-id="${esc(v)}" data-n="${esc(v.toLowerCase())}">${esc(v)}${v===cur?' ✓':''}</button>`).join('');
@@ -1070,7 +1077,7 @@ const A={
   bkload:()=>restore(),
   lang:()=>setLang(LANG==='hu'?'en':'hu'),
   migrate:()=>migrate(),
-  logout:async()=>{try{await sb.auth.signOut()}catch(e){}location.reload()},
+  logout:async()=>{await clearLocal();try{await sb.auth.signOut()}catch(e){}location.reload()},
   acct:()=>{},
   bkdl:()=>{const t=$('#bkText').value,b=new Blob([t],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pottery-log-backup-'+today()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 };
@@ -1171,7 +1178,7 @@ $('#sheet').addEventListener('change',async e=>{const t=e.target;
 const SB_URL='https://bevwgmlsgbvgnptinisy.supabase.co',SB_KEY='sb_publishable_93xtMcG6Lea4Qz5rzJEJEg_CkAdXb5z';
 const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const URL_TTL=60*60*24*7;
-let me=null,started=false,recovering=/type=recovery/.test(location.hash);
+let aiLeft=null,me=null,started=false,recovering=/type=recovery/.test(location.hash);
 const nowIso=()=>new Date().toISOString();
 const sbErr=e=>{const x=new Error(e&&e.message||'save');x.code=e&&/quota|exceed|too large/i.test(e.message||'')?'quota_exceeded':e&&e.code;return x};
 
@@ -1184,23 +1191,38 @@ async function signUrls(list){
   list.forEach(x=>{if(x&&x.aid&&map[x.aid])x.src=map[x.aid]})}
 const stripSrc=o=>Array.isArray(o.photos)?{...o,photos:o.photos.map(ph=>ph&&ph.aid?{...ph,src:''}:ph)}:o;
 
+/* offline copy of the last loaded log (this device only); removed on log out */
+async function clearLocal(){try{Object.keys(localStorage).filter(k=>k.startsWith('pottery-log.cache.')).forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{if(window.caches)await caches.delete('pl-photos-v1')}catch(e){}}
+let isOffline=false;
+const offKey=t=>'pottery-log.cache.'+me.id+'.'+t;
+function offSave(t,d){try{localStorage.setItem(offKey(t),JSON.stringify(d))}catch(e){}}
+function offPut(t,id,obj){const a=(offLoad(t)||[]).filter(r=>r.id!==id);if(obj)a.push({id,data:JSON.parse(JSON.stringify(obj))});offSave(t,a)}
+function offLoad(t){try{const v=localStorage.getItem(offKey(t));return v==null?undefined:JSON.parse(v)}catch(e){return undefined}}
+
 /* the app's storage calls, backed by Supabase */
 const refreshers=[];
 function watch(get,cb,err){const run=async()=>{try{cb(await get())}catch(e){err&&err(e)}};refreshers.push(run);run();return()=>{}}
 function mkDb(){
   return{
-    collection(t){const get=async()=>{const {data,error}=await sb.from(t).select('id,data');if(error)throw error;
-        if(t==='pieces')await signUrls(data.flatMap(r=>(r.data&&r.data.photos)||[]));
-        return{docs:data.map(r=>({id:r.id,data:()=>r.data||{}})),metadata:{fromCache:false}}};
+    collection(t){const get=async()=>{let data,fromCache=false;
+        try{const r=await sb.from(t).select('id,data');if(r.error)throw r.error;data=r.data;
+          if(t==='pieces')await signUrls(data.flatMap(x=>(x.data&&x.data.photos)||[]));
+          offSave(t,data);isOffline=false}
+        catch(e){data=offLoad(t);if(!data)throw e;fromCache=true;isOffline=true}
+        return{docs:data.map(r=>({id:r.id,data:()=>r.data||{}})),metadata:{fromCache}}};
       return{
         doc:id=>({
-          set:async obj=>{const {error}=await sb.from(t).upsert({id,data:stripSrc(obj),updated_at:nowIso()});if(error)throw sbErr(error)},
-          delete:async()=>{const {error}=await sb.from(t).delete().eq('id',id);if(error)throw sbErr(error)}}),
+          set:async obj=>{if(!navigator.onLine){const x=new Error('offline');x.code='offline';throw x}const {error}=await sb.from(t).upsert({id,data:stripSrc(obj),updated_at:nowIso()});if(error)throw sbErr(error);offPut(t,id,obj)},
+          delete:async()=>{const {error}=await sb.from(t).delete().eq('id',id);if(error)throw sbErr(error);offPut(t,id,null)}}),
         get,
         onSnapshot:(cb,err)=>watch(get,cb,err)}},
-    doc(){const get=async()=>{const {data,error}=await sb.from('settings').select('data').maybeSingle();if(error)throw error;return{exists:!!data,data:()=>data&&data.data}};
+    doc(){const get=async()=>{let data;
+        try{const r=await sb.from('settings').select('data').maybeSingle();if(r.error)throw r.error;data=r.data;offSave('settings',data)}
+        catch(e){const c=offLoad('settings');if(c===undefined)throw e;data=c}
+        return{exists:!!data,data:()=>data&&data.data}};
       return{
-        set:async s=>{const {error}=await sb.from('settings').upsert({user_id:me.id,data:s,updated_at:nowIso()});if(error)throw sbErr(error)},
+        set:async s=>{if(!navigator.onLine){const x=new Error('offline');x.code='offline';throw x}const {error}=await sb.from('settings').upsert({user_id:me.id,data:s,updated_at:nowIso()});if(error)throw sbErr(error);offSave('settings',{data:s})},
         get,
         onSnapshot:(cb,err)=>watch(get,cb,err)}}}}
 const mkAssets=()=>({
@@ -1209,9 +1231,21 @@ const mkAssets=()=>({
     const {data}=await sb.storage.from('photos').createSignedUrl(path,URL_TTL);return{id:path,url:data&&data.signedUrl}},
   delete:async id=>{if(String(id).startsWith(me.id+'/'))await sb.storage.from('photos').remove([id])}});
 
+/* ---------- CAPTCHA (Cloudflare Turnstile) ---------- */
+const TS_KEY='';
+let capTok=null,capId=null;
+function loadTurnstile(){return new Promise(res=>{if(window.turnstile)return res(true);
+  let sc=document.getElementById('tsjs');if(!sc){sc=document.createElement('script');sc.id='tsjs';sc.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';sc.async=true;document.head.appendChild(sc)}
+  sc.addEventListener('load',()=>res(true));sc.addEventListener('error',()=>res(false))})}
+async function mountCaptcha(){capTok=null;capId=null;const el=$('#cfts');if(!TS_KEY||!el)return;
+  if(!(await loadTurnstile())||!window.turnstile||!document.contains(el))return;
+  capId=turnstile.render(el,{sitekey:TS_KEY,language:LANG,callback:t=>{capTok=t},'expired-callback':()=>{capTok=null},'error-callback':()=>{capTok=null}})}
+function resetCaptcha(){capTok=null;try{if(capId!=null&&window.turnstile)turnstile.reset(capId)}catch(e){}}
+
 /* ---------- login ---------- */
 const here=()=>location.origin+location.pathname;
 function authMsg(m){const map={'Invalid login credentials':'Wrong email or password.','Email not confirmed':'Confirm your email first: open the link we sent you.','User already registered':'There is already an account with this email. Log in instead.'};
+  if(/captcha/i.test(m||''))return 'The security check failed. Wait for it to finish and try again.';
   if(/rate limit/i.test(m||''))return 'Too many emails were sent just now. Wait a while and try again.';
   if(/at least 6|should be at least/i.test(m||''))return 'Use a password with at least 8 characters.';
   return map[m]||m||'Something went wrong. Try again.'}
@@ -1222,37 +1256,40 @@ function authView(mode,note){
   let body='';
   let gone=false;try{gone=sessionStorage.getItem('pl.deleted')==='1';sessionStorage.removeItem('pl.deleted')}catch(e){}
   if(mode==='login')body=(gone?'<div class="panel"><p style="margin:0">Your account and everything in it have been deleted.</p></div>':'')+`<p class="sub">Log every piece: photos, weights, glazes and stages.</p>
-    <form class="panel" data-am="login">${f('aEmail','Email','email','username')}${f('aPw','Password','password','current-password')}<div class="err" id="aErr"></div><button class="btn pri" type="submit">Log in</button></form>
+    <form class="panel" data-am="login">${f('aEmail','Email','email','username')}${f('aPw','Password','password','current-password')}<div class="cfts" id="cfts"></div><div class="err" id="aErr"></div><button class="btn pri" type="submit">Log in</button></form>
     <div class="row2"><button class="lnk" type="button" data-am="go" data-to="forgot">Forgot password?</button><button class="lnk" type="button" data-am="go" data-to="signup">Create an account</button></div>`;
   else if(mode==='signup')body=`<p class="sub">Make your own free log. Only you will see your pieces.</p>
-    <form class="panel" data-am="signup">${f('aEmail','Email','email','username')}<label>Password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><label class="agree"><input type="checkbox" id="aAgree"><span>I am 18 or older and I have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a>.</span></label><div class="err" id="aErr"></div><button class="btn pri" type="submit">Create account</button></form>
+    <form class="panel" data-am="signup">${f('aEmail','Email','email','username')}<label>Password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><label class="agree"><input type="checkbox" id="aAgree"><span data-noi18n>${LANG==='hu'?'Elmúltam 18 éves, elfogadom a <a href="terms.html" target="_blank" rel="noopener">Felhasználási feltételeket</a>, és elolvastam az <a href="privacy.html" target="_blank" rel="noopener">Adatvédelmi tájékoztatót</a>.':'I am 18 or older, I accept the <a href="terms.html" target="_blank" rel="noopener">Terms of use</a> and I have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a>.'}</span></label><div class="cfts" id="cfts"></div><div class="err" id="aErr"></div><button class="btn pri" type="submit">Create account</button></form>
     <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">I already have an account</button></div>`;
   else if(mode==='forgot')body=`<p class="sub">We’ll email you a link to set a new password.</p>
-    <form class="panel" data-am="forgot">${f('aEmail','Email','email','username')}<div class="err" id="aErr"></div><button class="btn pri" type="submit">Send link</button></form>
+    <form class="panel" data-am="forgot">${f('aEmail','Email','email','username')}<div class="cfts" id="cfts"></div><div class="err" id="aErr"></div><button class="btn pri" type="submit">Send link</button></form>
     <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">Back to log in</button></div>`;
   else if(mode==='newpw')body=`<p class="sub">Choose a new password.</p>
     <form class="panel" data-am="newpw"><label>New password <small>at least 8 characters</small><input type="password" id="aPw" autocomplete="new-password" minlength="8" required></label><div class="err" id="aErr"></div><button class="btn pri" type="submit">Save password</button></form>`;
   else if(mode==='check')body=`<div class="panel"><p style="margin:0">${esc(note||'')}</p></div>
     <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">Back to log in</button></div>`;
   else if(mode==='down')body=`<div class="panel"><p style="margin:0">Pottery Log could not load. Check your internet connection and reload the page.</p></div>`;
-  $('#authBox').innerHTML=head+body+'<p class="sub" style="font-size:13px;margin-top:8px"><a href="privacy.html" style="color:var(--mute)">Privacy policy</a> · <button class="lnk" type="button" data-am="lang" data-noi18n style="font-size:13px;padding:0;min-height:0">'+(LANG==='hu'?'English':'Magyar')+'</button></p>';
+  $('#authBox').innerHTML=head+body+'<p class="sub" style="font-size:13px;margin-top:8px"><a href="terms.html" style="color:var(--mute)">Terms of use</a> · <a href="privacy.html" style="color:var(--mute)">Privacy policy</a> · <button class="lnk" type="button" data-am="lang" data-noi18n style="font-size:13px;padding:0;min-height:0">'+(LANG==='hu'?'English':'Magyar')+'</button></p>';
+  mountCaptcha();
   const first=$('#authBox input');if(first&&matchMedia('(pointer:fine)').matches)first.focus()}
 $('#auth').addEventListener('click',e=>{if(e.target.closest('[data-am=lang]')){setLang(LANG==='hu'?'en':'hu');return}const b=e.target.closest('[data-am=go]');if(b){e.preventDefault();authView(b.dataset.to)}});
 $('#auth').addEventListener('submit',async e=>{
   e.preventDefault();const form=e.target,mode=form.dataset.am,btn=form.querySelector('button[type=submit]'),err=$('#aErr');
   const email=($('#aEmail')&&$('#aEmail').value||'').trim(),pw=$('#aPw')&&$('#aPw').value||'';
   if((mode==='signup'||mode==='newpw')&&pw.length<8){err.textContent='Use a password with at least 8 characters.';return}
-  if(mode==='signup'&&!$('#aAgree').checked){err.textContent='Please confirm that you are 18 or older and have read the Privacy policy.';return}
+  if(mode==='signup'&&!$('#aAgree').checked){err.textContent='Please confirm that you are 18 or older and accept the Terms of use.';return}
+  if(TS_KEY&&mode!=='newpw'&&!capTok){err.textContent='Wait a moment for the security check to finish, then try again.';return}
+  const captchaToken=capTok||undefined;
   btn.disabled=true;err.textContent='';
   try{
-    if(mode==='login'){const {error}=await sb.auth.signInWithPassword({email,password:pw});if(error)throw error}
-    else if(mode==='signup'){const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:here()}});if(error)throw error;
+    if(mode==='login'){const {error}=await sb.auth.signInWithPassword({email,password:pw,options:{captchaToken}});if(error)throw error}
+    else if(mode==='signup'){const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:here(),captchaToken}});if(error)throw error;
       if(!data.session)authView('check','Almost done: we sent a link to '+email+'. Open it on this device to confirm your email, then log in.')}
-    else if(mode==='forgot'){const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:here()});if(error)throw error;
+    else if(mode==='forgot'){const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:here(),captchaToken});if(error)throw error;
       authView('check','If there is an account for '+email+', a link to set a new password is on its way. Open it on this device.')}
     else if(mode==='newpw'){const {data,error}=await sb.auth.updateUser({password:pw});if(error)throw error;recovering=false;toast('Password saved');
       history.replaceState(null,'',here());if(data&&data.user)startApp(data.user)}
-  }catch(x){if(err)err.textContent=authMsg(x&&x.message)}
+  }catch(x){if(err)err.textContent=authMsg(x&&x.message);resetCaptcha()}
   finally{if(btn&&document.contains(btn))btn.disabled=false}});
 
 /* ---------- consent before photos go to Google Gemini ---------- */
@@ -1269,7 +1306,7 @@ Object.assign(A,{
   delacct:()=>modal(`<h3>Delete your account?</h3><p>This permanently deletes your login and all your pieces, photos, firings and settings from Pottery Log. It cannot be undone.</p><p>Copies in your Google Drive and backups you exported are not affected: they are yours to keep or delete.</p><div class="mact"><button class="btn" data-act="closemodal">Cancel</button><button class="btn del" data-act="delacctgo">Delete everything</button></div>`),
   delacctgo:async(id,btn)=>{if(btn.disabled)return;btn.disabled=true;btn.textContent='Deleting…';
     try{const {data,error}=await sb.functions.invoke('delete-account',{body:{}});if(error||!data||!data.ok)throw error||new Error('failed');
-      try{Object.keys(localStorage).filter(k=>k.includes(me.id)).forEach(k=>localStorage.removeItem(k));sessionStorage.setItem('pl.deleted','1')}catch(e){}
+      try{Object.keys(localStorage).filter(k=>k.includes(me.id)).forEach(k=>localStorage.removeItem(k));sessionStorage.setItem('pl.deleted','1')}catch(e){}await clearLocal();
       try{await sb.auth.signOut({scope:'local'})}catch(e){}location.reload()}
     catch(e){btn.disabled=false;btn.textContent='Delete everything';toast('Could not delete the account. Try again, or contact the app’s owner.')}}});
 
@@ -1284,7 +1321,7 @@ function startApp(user){
       const {data,error}=await sb.functions.invoke('name-piece',{body:{facts,images,lang:LANG}});
       if(o.signal&&o.signal.aborted){const x=new Error('cancelled');x.code='cancelled';throw x}
       if(error){let code='failed';try{const j=await error.context.json();code=j.error||code}catch(e){}const x=new Error(code);x.code=code;throw x}
-      return data&&data.names||[]}};
+      aiLeft=data&&typeof data.left==='number'?data.left:null;return data&&data.names||[]}};
   S.settings=fixSettings(null);S.pieces=[];S.firings=[];setStatus(false,'Loading your log…');render();
   const timer=setTimeout(()=>setStatus(false,'Still loading… check your connection'),10000);
   const busyUI=()=>sheet&&sheet.mode!=='detail';
@@ -1293,10 +1330,12 @@ function startApp(user){
   db.collection('firings').onSnapshot(snap=>{S.firings=snap.docs.map(fixF);if(!busyUI())render()},()=>{});
   db.collection('pieces').onSnapshot(snap=>{clearTimeout(timer);
     S.pieces=snap.docs.map(d=>normPiece({...d.data(),id:d.id}));
-    setStatus(true,'Synced to your account');if(!busyUI())render()},
+    if(snap.metadata.fromCache)setStatus(false,'Offline: showing your log from the last time you were online. Changes can’t be saved until you’re back online.');
+    else setStatus(true,'Synced to your account');if(!busyUI())render()},
     ()=>{clearTimeout(timer);setStatus(false,'Could not load your log. Check your connection and reload.')});
   /* pick up changes made on another device when you come back to the app */
   let lastRefresh=Date.now();
+  window.addEventListener('online',()=>{if(isOffline&&!busyUI()){lastRefresh=Date.now();refreshers.forEach(r=>r())}});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!busyUI()&&Date.now()-lastRefresh>20000){lastRefresh=Date.now();refreshers.forEach(r=>r())}});
 }
 
@@ -1308,6 +1347,8 @@ else{
     if(!session&&started){location.reload();return}
     if(!session&&ev==='INITIAL_SESSION')setTimeout(()=>authView('login'),0)});
 }
+
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
 /* ---------- Google Drive backup ---------- */
 const G_CLIENT='439257307194-tj0jaqsob3h9jqtsk28qo22quk81i8l4.apps.googleusercontent.com',G_SCOPE='https://www.googleapis.com/auth/drive.file';

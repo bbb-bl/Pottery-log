@@ -11,6 +11,18 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
 // Tried in order: if one model is unavailable or out of free quota, the next is used.
+const DAILY_LIMIT = 20; // "Name it for me" uses per person per day
+
+// The server-only admin key, provided to every Edge Function automatically.
+function adminKey(): string {
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  try {
+    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    return keys.default || (Object.values(keys)[0] as string) || "";
+  } catch { return ""; }
+}
+
 const MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash"];
 
 Deno.serve(async (req) => {
@@ -25,6 +37,13 @@ Deno.serve(async (req) => {
 
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return json({ error: "no_key" }, 500);
+
+  // 1b. Daily limit per user (counted in the ai_usage table, which only this server can touch)
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, adminKey(), { auth: { persistSession: false } });
+  const { data: used, error: limErr } = await admin.rpc("ai_take", { p_user: u.user.id });
+  if (limErr) return json({ error: "limit_check" }, 500);
+  if ((used as number) > DAILY_LIMIT) return json({ error: "daily_limit", left: 0 }, 429);
+  const left = DAILY_LIMIT - (used as number);
 
   // 2. Read the piece details and up to 2 small photos
   let body: { facts?: string; images?: string[]; lang?: string };
@@ -67,7 +86,7 @@ Deno.serve(async (req) => {
     let names: unknown = [];
     try { names = JSON.parse(text); } catch { const m = text.match(/\[[\s\S]*\]/); if (m) try { names = JSON.parse(m[0]); } catch { /* ignore */ } }
     const list = (Array.isArray(names) ? names : []).map((x) => String(x).trim()).filter(Boolean).slice(0, 6);
-    return json({ names: list, model });
+    return json({ names: list, model, left });
   }
   return json({ error: last }, last === "rate_limited" ? 429 : 502);
 });
