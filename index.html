@@ -296,6 +296,192 @@ input[type=email],input[type=password]{min-height:44px;border:0;border-radius:10
 <div class="toast" id="toast" role="status"></div>
 
 <script>
+/* ---------- language: English / Magyar ----------
+   The app is written in English. In Hungarian mode every text the page shows is swapped
+   for its translation as it appears. Saved data (stage names, materials) stays in English
+   underneath, so switching language never changes your pieces. */
+const LANG_KEY='pottery-log.lang';
+let LANG=(()=>{try{const v=localStorage.getItem(LANG_KEY);if(v==='hu'||v==='en')return v}catch(e){}return /^hu/i.test(navigator.language||'')?'hu':'en'})();
+const HU={
+/* tabs, headings */
+'My Pieces':'Darabjaim','Search':'Keresés','Settings':'Beállítások','New':'Új','Edit':'Szerkesztés','Done':'Kész','Back':'Vissza','‹ Back':'‹ Vissza',
+'Save':'Mentés','Cancel':'Mégse','Delete':'Törlés','Close':'Bezárás','Clear':'Törlés','Apply':'Alkalmaz','Reset':'Visszaállítás','Add':'Hozzáadás','Set':'Beállít','Move':'Áthelyezés',
+'Hide':'Elrejtés','Show':'Megjelenítés','Copied':'Másolva','Saved':'Mentve','Saving…':'Mentés…','Thinking…':'Gondolkodom…','Connecting…':'Kapcsolódás…','Moving…':'Áthelyezés…',
+'Account':'Fiók','Backup':'Biztonsági mentés','Studio':'Műhely','Preferences':'Beállítások','Sections':'Részek','About':'Adatok','Filters':'Szűrők','Sort by':'Rendezés',
+'Signed in as':'Bejelentkezve mint','Log out':'Kijelentkezés','Language':'Nyelv',
+'Export Backup':'Mentés exportálása','Import Backup':'Mentés importálása','Backup data':'Mentett adatok','Copy all your data as text':'Az összes adat másolása szövegként',
+'Restore from a backup':'Visszaállítás mentésből','Select all and copy':'Összes kijelölése és másolás','Restore':'Visszaállítás','Choose file':'Fájl kiválasztása','Download file':'Fájl letöltése',
+'Your pieces and photos are saved to your Pottery Log account. Only you can see them. Log in on any device to see them there.':'A darabjaid és fotóid a Pottery Log fiókodba mentődnek. Csak te látod őket. Bármelyik eszközön bejelentkezve elérheted őket.',
+'Synced to your account':'Szinkronizálva a fiókoddal','Loading your log…':'Napló betöltése…','Still loading… check your connection':'Még tölt… ellenőrizd a kapcsolatot',
+'Could not load your log. Check your connection and reload.':'Nem sikerült betölteni a naplót. Ellenőrizd a kapcsolatot és töltsd újra.',
+/* pieces list */
+'No pieces yet.':'Még nincs egy darab sem.','Active pieces':'Aktív darabok','All pieces':'Minden darab','Archived':'Archivált','Archived only':'Csak archiváltak',
+'Newest first':'Legújabb elöl','Oldest first':'Legrégebbi elöl','Title A–Z':'Cím A–Z','By location':'Hely szerint','Any':'Bármelyik','None':'Nincs',
+'Search pieces':'Darabok keresése','No pieces match these filters.':'Egy darab sem felel meg a szűrőknek.','No pieces to search through yet':'Még nincs mit keresni',
+'Select some pieces first':'Előbb jelölj ki darabokat','Set stage':'Szakasz beállítása','More actions':'További műveletek','Duplicate':'Másolat','Duplicate…':'Másolat…',
+'Number of copies':'Másolatok száma','Copies keep the clay, form, stage and layers, without photos. Handy for a set of mugs.':'A másolatok megtartják az agyagot, formát, szakaszt és rétegeket, fotók nélkül. Hasznos például egy bögrekészlethez.',
+'Back in progress':'Vissza folyamatban lévőkhöz','Untitled':'Névtelen','Untitled piece':'Névtelen darab','Tap again to delete':'Koppints újra a törléshez','Tap again to delete for good':'Koppints újra a végleges törléshez',
+'Piece added':'Darab hozzáadva','Piece deleted':'Darab törölve','Could not delete':'Nem sikerült törölni','Could not delete. Try again.':'Nem sikerült törölni. Próbáld újra.','Could not save. Try again.':'Nem sikerült menteni. Próbáld újra.',
+'No archived pieces. Long-press a piece and choose Archive to move it here.':'Nincs archivált darab. Nyomd hosszan egy darabot és válaszd az Archiválást.',
+"Pieces that didn't work out, or that you want out of the way. Open one and use ⋯ to unarchive.":'Félresikerült vagy félretett darabok. Nyisd meg és a ⋯ gombbal hozhatod vissza.',
+'Archive':'Archiválás','Unarchive':'Visszahozás',
+/* piece editor / detail */
+'Create Piece':'Darab létrehozása','Piece name':'Darab neve','Give it a name':'Adj neki nevet','Name it for me':'Nevezd el helyettem','More ideas':'Több ötlet',
+'No names came back. Try again.':'Nem jött név. Próbáld újra.','Couldn’t get names. Try again.':'Nem sikerült nevet kérni. Próbáld újra.',
+'Too many requests right now. Try again in a little while.':'Túl sok kérés. Próbáld újra kicsit később.','That photo couldn’t be read. Try another one.':'Ezt a fotót nem sikerült beolvasni. Próbálj egy másikat.',
+'Log in again to use naming.':'Jelentkezz be újra az elnevezéshez.',
+'Current Stage':'Jelenlegi szakasz','Stage':'Szakasz','Stages':'Szakaszok','Stage date':'Szakasz dátuma','Earlier stages':'Korábbi szakaszok','Status':'Állapot',
+'Form':'Forma','Forms':'Formák','Forming Method':'Formázási mód','Forming method':'Formázási mód','Forming Methods':'Formázási módok','Clay body':'Agyag','Clay Body':'Agyag','Clay Bodies':'Agyagok',
+'Location':'Hely','Locations':'Helyek','Price':'Ár','Notes':'Jegyzetek','Note':'Megjegyzés','Date':'Dátum','Weight':'Tömeg','Dimensions':'Méretek','Measurements':'Mérések',
+'Width':'Szélesség','Length':'Hosszúság','Height':'Magasság','Width x Length x Height':'Szélesség × hosszúság × magasság','No measurements yet.':'Még nincs mérés.',
+'Decoration':'Díszítés','Decorations':'Díszítések','Decoration layers':'Díszítő rétegek','No decoration layers yet':'Még nincs díszítő réteg','Layer':'Réteg','Layer colour':'Réteg színe',
+'Layer cross-section':'Rétegek keresztmetszete','No layers yet. Add one with the buttons below.':'Még nincs réteg. Adj hozzá egyet a lenti gombokkal.','Remove layer':'Réteg törlése',
+'Coats':'Rétegszám','More coats':'Több réteg','Fewer coats':'Kevesebb réteg','Dip time':'Mártási idő','Surface area':'Felület','Surface Areas':'Felületek','Application':'Felvitel','Application Methods':'Felviteli módok',
+'Type':'Típus','Name':'Név','Shape':'Forma','Thick on rim, wiped foot…':'Vastagon a peremen, letörölt talp…','e.g. Amaco Celadon':'pl. Amaco Celadon',
+'Move up':'Feljebb','Move down':'Lejjebb','Previous photo':'Előző fotó','Next photo':'Következő fotó','Crop':'Vágás','Crop photo':'Fotó vágása','Free':'Szabad',
+'Drag the frame to move it, drag a corner to resize.':'Húzd a keretet a mozgatáshoz, a sarkát az átméretezéshez.','Photo cropped':'Fotó levágva','Photo to crop':'Vágandó fotó',
+'That photo could not be cropped':'Ezt a fotót nem sikerült levágni','That photo could not be opened':'Ezt a fotót nem sikerült megnyitni','That image format could not be read':'Ezt a képformátumot nem sikerült beolvasni',
+'A photo could not be saved':'Egy fotót nem sikerült menteni','Your storage for this log is full.':'Elfogyott a tárhely ehhez a naplóhoz.',
+'This browser is out of space. Remove photos or move pieces to your account.':'Ebben a böngészőben elfogyott a hely. Törölj fotókat.',
+'Search or add new':'Keresés vagy új hozzáadása','Hidden from lists':'Elrejtve a listákból','HIDDEN':'REJTETT',
+"Nothing here yet. Tap Add, or type a new name on a piece and it's added here automatically.":'Itt még nincs semmi. Koppints a Hozzáadásra, vagy írj be új nevet egy darabnál, és ide is bekerül.',
+'Nothing yet. Type a name above to add one.':'Még semmi. Írj be fent egy nevet a hozzáadáshoz.',
+/* stages page */
+'New stage':'Új szakasz','Remove stage':'Szakasz törlése','That stage already exists':'Ez a szakasz már létezik','That name already exists':'Ez a név már létezik',
+"Renaming a stage updates every piece in it. A stage can only be removed when it's empty.":'A szakasz átnevezése minden benne lévő darabot frissít. Szakaszt csak üresen lehet törölni.',
+'This is the list of stages shown on your pieces. Tap Edit to rename, add, remove or reorder them.':'Ezek a darabjaidnál megjelenő szakaszok. A Szerkesztés gombbal átnevezheted, hozzáadhatsz, törölhetsz vagy átrendezheted őket.',
+'To stage':'Szakaszba','Stage to move pieces to':'Melyik szakaszba kerüljenek',
+/* firings */
+'Firing':'Égetés','Firing Log':'Égetési napló','Log a firing':'Égetés rögzítése','No firings yet':'Még nincs égetés','Firing saved':'Égetés mentve','Firing deleted':'Égetés törölve',
+'Pieces in this firing':'Darabok ebben az égetésben','Cone':'Kúp','Top temperature':'Csúcshőmérséklet','Schedule, hold, cooling, results':'Program, hőntartás, hűlés, eredmény',
+'Studio kiln, electric…':'Műhely kemence, elektromos…','e.g. 06 or 6':'pl. 06 vagy 6','None logged yet.':'Még nincs rögzítve.',
+'Log each kiln load with its cone, temperature and the pieces inside. You can move those pieces to the next stage at the same time.':'Rögzíts minden kemencetöltetet a kúppal, hőmérséklettel és a benne lévő darabokkal. A darabokat egyúttal a következő szakaszba is áthelyezheted.',
+'Bisque':'Zsengeégetés','Raku':'Raku','Pit / smoke':'Gödrös / füstös','Mixed':'Vegyes','Other':'Egyéb',
+/* shrinkage */
+'Shrinkage':'Zsugorodás','Clay shrinkage':'Agyag zsugorodása','Measured shrinkage':'Mért zsugorodás','Before':'Előtte','After firing':'Égetés után','Wanted fired size':'Kívánt égetett méret',
+'Make it':'Készítsd','Make it this size':'Ekkorára készítsd','Measure a piece or test bar before and after firing.':'Mérj meg egy darabot vagy próbapálcát égetés előtt és után.',
+'How big to make it so it ends up at the size you want.':'Mekkorára készítsd, hogy a kívánt méretű legyen.','Nothing to compare yet.':'Még nincs mit összehasonlítani.',
+'Averages from pieces where you logged size or weight at more than one stage.':'Átlag azokból a darabokból, ahol több szakaszban is rögzítetted a méretet vagy tömeget.','Your clay bodies':'Agyagjaid',
+/* settings */
+'Units':'Mértékegységek','Currency':'Pénznem','g (grams)':'g (gramm)','oz (ounces)':'oz (uncia)','cm (centimetres)':'cm (centiméter)','in (inches)':'in (hüvelyk)',
+'Nothing new to restore':'Nincs új visszaállítandó','That text is not a valid backup':'Ez a szöveg nem érvényes mentés','File loaded. Tap Restore.':'Fájl betöltve. Koppints a Visszaállításra.','Could not read that file':'Nem sikerült beolvasni a fájlt',
+'Restored':'Visszaállítva','Shrinkage Calculator':'Zsugorodás-kalkulátor','Dimensions unit':'Méret mértékegysége','Weight unit':'Tömeg mértékegysége','Restore data from a previous backup':'Adatok visszaállítása korábbi mentésből','Move to my account':'Áthelyezés a fiókomba',
+/* drive */
+'Google Drive':'Google Drive','Connect Google Drive':'Google Drive csatlakoztatása','Back up every piece to a Pottery Log folder in your Drive':'Minden darab mentése a Drive-od Pottery Log mappájába',
+'Back up now':'Mentés most','Backing up…':'Mentés…','Working…':'Folyamatban…','Up to date':'Naprakész','Open Pottery Log folder in Drive':'Pottery Log mappa megnyitása a Drive-ban','Disconnect Google Drive':'Google Drive leválasztása',
+'How the Drive backup works:':'Így működik a Drive mentés:','Your own folder.':'Saját mappa.','Reconnect about once an hour.':'Óránként újra kell csatlakozni.','Nothing is deleted from Drive.':'A Drive-ból semmi sem törlődik.','Private.':'Privát.',
+'Each piece gets a folder inside “Pottery Log” in your Drive, with its photos and a piece.json file holding all its details.':'Minden darab saját mappát kap a Drive-od „Pottery Log” mappájában, a fotóival és egy piece.json fájllal, ami az összes adatát tartalmazza.',
+'Google keeps the connection open for about an hour. After that your saves wait here (you’ll see “waiting”). Tap':'A Google kb. egy óráig tartja nyitva a kapcsolatot. Utána a mentéseid itt várnak (ezt látod: „vár”). Koppints a',
+'and they all go to Drive.':'gombra, és mind felkerülnek a Drive-ra.',
+'Pieces and photos you delete in the app stay in Drive, because it’s a backup. Delete them in Drive yourself if you want them gone.':'Az appban törölt darabok és fotók a Drive-on maradnak, mert ez egy biztonsági mentés. Ha nem kellenek, töröld őket a Drive-ban.',
+'Pottery Log can only see the files it made itself, never anything else in your Drive.':'A Pottery Log csak az általa létrehozott fájlokat látja, a Drive-od többi részét soha.',
+'Privacy policy':'Adatvédelem','Drive is up to date':'A Drive naprakész','Backup stopped':'A mentés megszakadt',
+'Drive disconnected. Your Drive files stay where they are.':'Drive leválasztva. A fájljaid a Drive-on maradnak.',
+'Google asked you to reconnect. Tap Back up now.':'A Google újracsatlakozást kér. Koppints a Mentés most gombra.',
+'Some pieces were not backed up. Tap Back up now to try again.':'Néhány darab mentése nem sikerült. Koppints a Mentés most gombra.',
+'Google did not allow the connection. Try again, and on Google’s screen allow Pottery Log to save its files to your Drive.':'A Google nem engedélyezte a kapcsolatot. Próbáld újra, és a Google ablakában engedd, hogy a Pottery Log fájlokat mentsen a Drive-odra.',
+'The Google window was closed before you finished.':'A Google ablak bezárult, mielőtt befejezted volna.',
+'Your browser blocked the Google window. Allow pop-ups for this site and try again.':'A böngésző letiltotta a Google ablakot. Engedélyezd a felugró ablakokat ennél az oldalnál, és próbáld újra.',
+'Tick the box that lets Pottery Log save its files to your Drive, then try again.':'Pipáld be a négyzetet, ami engedi a Pottery Lognak a fájlmentést a Drive-ra, aztán próbáld újra.',
+'Google sign-in did not load. Check your connection and reload.':'A Google bejelentkezés nem töltődött be. Ellenőrizd a kapcsolatot és töltsd újra.',
+'Could not reach Google Drive. Try again.':'Nem érem el a Google Drive-ot. Próbáld újra.',
+/* login */
+'Log in':'Bejelentkezés','Create account':'Fiók létrehozása','Create an account':'Fiók létrehozása','Forgot password?':'Elfelejtett jelszó?','I already have an account':'Már van fiókom',
+'Back to log in':'Vissza a bejelentkezéshez','Send link':'Link küldése','Password':'Jelszó','New password':'Új jelszó','Save password':'Jelszó mentése','Password saved':'Jelszó mentve',
+'at least 8 characters':'legalább 8 karakter','Choose a new password.':'Válassz új jelszót.','We’ll email you a link to set a new password.':'Küldünk egy linket e-mailben az új jelszó beállításához.',
+'Log every piece: photos, weights, glazes and stages.':'Rögzíts minden darabot: fotók, tömeg, mázak és szakaszok.','Make your own free log. Only you will see your pieces.':'Készítsd el a saját ingyenes naplódat. A darabjaidat csak te látod.',
+'Wrong email or password.':'Hibás e-mail vagy jelszó.','Confirm your email first: open the link we sent you.':'Előbb erősítsd meg az e-mail címed: nyisd meg a küldött linket.',
+'There is already an account with this email. Log in instead.':'Ezzel az e-mail címmel már van fiók. Jelentkezz be.','Too many emails were sent just now. Wait a while and try again.':'Túl sok e-mail ment ki az előbb. Várj egy kicsit és próbáld újra.',
+'Use a password with at least 8 characters.':'Legalább 8 karakteres jelszót használj.','Something went wrong. Try again.':'Valami hiba történt. Próbáld újra.',
+'Pottery Log could not load. Check your internet connection and reload the page.':'A Pottery Log nem töltődött be. Ellenőrizd az internetkapcsolatot és töltsd újra az oldalt.','Email':'E-mail',
+'Added':'Hozzáadva','Firings':'Égetések','Cross-section':'Keresztmetszet','Log a Firing':'Égetés rögzítése','Move the checked pieces to':'A bejelölt darabok áthelyezése ide:','Stage…':'Szakasz…','Add photo':'Fotó hozzáadása','Select':'Kijelölés','seconds':'másodperc','Copy':'Másolás','No filters applied':'Nincs szűrő',
+'The surface layers stacked on the clay, first layer at the bottom. Thicker bands mean more coats.':'A felületi rétegek az agyagon egymásra rakva, az első legalul. A vastagabb sáv több réteget jelent.',
+'This text holds all your pieces, firings and lists. Copy it into a note or an email to yourself.':'Ez a szöveg tartalmazza az összes darabod, égetésed és listád. Másold be egy jegyzetbe, vagy küldd el magadnak e-mailben.',
+'Paste a backup here and tap Restore. Anything already in your log is kept; only missing pieces, firings and list entries are added.':'Illessz be ide egy mentést, és koppints a Visszaállításra. Ami már a naplódban van, megmarad; csak a hiányzó darabok, égetések és listaelemek kerülnek hozzá.',
+'Tap':'Koppints a','to log your first piece: photos, weight, and every glaze layer with its coats.':'gombra az első darabod rögzítéséhez: fotók, tömeg és minden mázréteg a rétegszámmal.',
+/* stages, statuses (saved data stays English) */
+'Idea':'Ötlet','Formed':'Formázva','Trimmed':'Esztergálva','Bisqued':'Zsengélve','Glazed':'Mázazva','Finished':'Kész','Wet':'Nedves','Leather hard':'Bőrkemény','Bone dry':'Csontszáraz','Bisque fired':'Zsengélve','Glaze fired':'Mázégetve',
+'Not for sale':'Nem eladó','Available':'Eladó','Sold':'Eladva','Gifted':'Elajándékozva','Traded':'Elcserélve',
+/* default materials */
+'Stoneware':'Kőagyag','Grogged stoneware':'Samottos kőagyag','Porcelain':'Porcelán','Earthenware':'Cserépagyag','Terracotta':'Terrakotta',
+'Bowl':'Tál','Coffee cup':'Kávéscsésze','Jar':'Tégely','Moon jar':'Holdváza','Mug':'Bögre','Planter':'Kaspó','Plate':'Tányér','Platter':'Tálaló','Tea cup':'Teáscsésze','Test tile':'Tesztlap','Urn':'Urna','Vase':'Váza','Cup':'Csésze','Teapot':'Teáskanna',
+'Coiled':'Hurkatechnika','Mold formed':'Formába nyomott','Pinched':'Nyomkodott','Slab built':'Lapépítés','Slip cast':'Iszapöntéses','Thrown and altered':'Korongozott és alakított','Wheel thrown':'Korongozott','Wheel-thrown':'Korongozott',
+'Coil':'Hurka','Slab':'Lap','Pinch':'Nyomkodás','Mould':'Forma',
+'Bisque shelf':'Zsengepolc','Damp room':'Párás szekrény','Glaze shelf':'Mázpolc','Home':'Otthon','Kiln':'Kemence','My cubby':'Saját polcom','Drying shelf':'Szárítópolc',
+'All over':'Teljes felület','Inside':'Belül','Outside':'Kívül','Rim':'Perem','Foot':'Talp',
+'Brushed':'Ecsetelt','Bubble glazed':'Buborékmázas','Dipped':'Mártott','Poured':'Leöntött','Sponged':'Szivacsolt','Sprayed':'Szórt','Trailed':'Csurgatott','Wax resist':'Viaszos takarás',
+'Glaze':'Máz','Glazes':'Mázak','Underglaze':'Alámáz','Underglazes':'Alámázak','Slip':'Engób','Slips':'Engóbok','Slip / engobe':'Engób','Oxide':'Oxid','Oxides':'Oxidok','Stain':'Pigment','Stains':'Pigmentek','Oxide / stain':'Oxid / pigment'
+};
+const tw=w=>HU[w]||w;
+const plural=(n,one,many)=>n+' '+(n==1?one:many);
+const HU_RX=[
+[/^Move to (.+)$/,(m,s)=>'Tovább: '+tw(s)],
+ [/^(\d+) coats?$/,(m,n)=>n+' réteg'],
+ [/^(\d+)× (.+)$/,(m,n,s)=>n+'× '+tw(s)],
+ [/^(\d+)\. (.+)$/,(m,n,s)=>HU[s]?n+'. '+HU[s]:null],
+ [/^Layer (\d+)$/,(m,n)=>n+'. réteg'],
+ [/^· (.+)$/,(m,s)=>'· '+tw(s)],
+ [/^\+ (.+)$/,(m,s)=>'+ '+tw(s)],
+ [/^Date: Today • (.+)$/,(m,s)=>'Dátum: ma • '+s],
+ [/^Date: (.+)$/,(m,s)=>'Dátum: '+s],
+ [/^(.+): (\d+)$/,(m,s,n)=>HU[s]?HU[s]+': '+n:null],
+ [/^(\d+) selected$/,(m,n)=>n+' kijelölve'],
+ [/^(\d+) waiting$/,(m,n)=>n+' vár'],
+ [/^Last backup (.+)$/,(m,d)=>'Utolsó mentés: '+d],
+ [/^Moved to (.+)$/,(m,s)=>'Áthelyezve: '+tw(s)],
+ [/^Renamed to (.+)$/,(m,s)=>'Átnevezve: '+s],
+ [/^Named “(.+)”$/,(m,s)=>'Elnevezve: „'+s+'”'],
+ [/^Restoring (\d+) of (\d+)…$/,(m,a,b)=>'Visszaállítás: '+a+' / '+b+'…'],
+ [/^(\d+) pieces? backed up to Drive$/,(m,n)=>n+' darab mentve a Drive-ra'],
+ [/^(\d+) moved to your account$/,(m,n)=>n+' áthelyezve a fiókodba'],
+ [/^(\d+) pieces? (?:is|are) in (.+)\. Move them first\.$/,(m,n,s)=>n+' darab van itt: '+tw(s)+'. Előbb helyezd át őket.'],
+ [/^(\d+) updated$/,(m,n)=>n+' frissítve'],
+ [/^(\d+) items? restored$/,(m,n)=>n+' elem visszaállítva'],
+ [/^(\d+) cop(?:y|ies) made$/,(m,n)=>n+' másolat kész'],
+ [/^(\d+) pieces?$/,(m,n)=>n+' darab'],
+ [/^(\d+) photos?$/,(m,n)=>n+' fotó'],
+ [/^Photo (\d+)$/,(m,n)=>n+'. fotó'],
+ [/^Remove photo (\d+)$/,(m,n)=>n+'. fotó törlése'],
+ [/^Crop photo (\d+)$/,(m,n)=>n+'. fotó vágása'],
+ [/^Stage of photo (\d+)$/,(m,n)=>n+'. fotó szakasza'],
+ [/^Add “(.+)”$/,(m,s)=>'Hozzáadás: „'+s+'”'],
+ [/^Add (.+)$/,(m,s)=>HU[s]?HU[s]+' hozzáadása':null],
+ [/^New (.+)$/,(m,s)=>HU[s]?'Új '+HU[s].toLowerCase():null],
+ [/^Almost done: we sent a link to (.+)\. Open it on this device to confirm your email, then log in\.$/,(m,e)=>'Majdnem kész: küldtünk egy linket ide: '+e+'. Nyisd meg ezen az eszközön az e-mail megerősítéséhez, aztán jelentkezz be.'],
+ [/^If there is an account for (.+), a link to set a new password is on its way\. Open it on this device\.$/,(m,e)=>'Ha van fiók ezzel a címmel ('+e+'), úton van a link az új jelszóhoz. Nyisd meg ezen az eszközön.'],
+ [/^Today • (.+)$/,(m,s)=>'Ma • '+s],
+ [/^(.+):$/,(m,s)=>HU[s]?HU[s]+':':null],
+];
+function trText(t){
+  if(LANG!=='hu'||!t)return t;
+  const core=t.trim();if(!core||!/[A-Za-z]/.test(core))return t;
+  const lead=t.slice(0,t.indexOf(core)),trail=t.slice(t.indexOf(core)+core.length);
+  if(HU[core]!==undefined)return lead+HU[core]+trail;
+  for(const [rx,fn] of HU_RX){const m=core.match(rx);if(m){const r=fn(...m);if(r!=null)return lead+r+trail}}
+  if(core.includes(' · ')){const parts=core.split(' · ');const out=parts.map(p=>p.trim()?trText(p):p);if(out.some((p,i)=>p!==parts[i]))return lead+out.join(' · ')+trail}
+  return t}
+const I18N_SKIP='script,style,textarea,code,pre,[data-noi18n]';
+function trEl(el){
+  if(LANG!=='hu')return;
+  for(const a of ['placeholder','aria-label','title']){const v=el.getAttribute&&el.getAttribute(a);if(v){const n=trText(v);if(n!==v)el.setAttribute(a,n)}}}
+function trTree(root){
+  if(LANG!=='hu'||!root)return;
+  if(root.nodeType===3){if(!(root.parentElement&&root.parentElement.closest(I18N_SKIP))){const n=trText(root.nodeValue);if(n!==root.nodeValue)root.nodeValue=n}return}
+  if(root.nodeType!==1||root.closest(I18N_SKIP))return;
+  trEl(root);root.querySelectorAll('[placeholder],[aria-label],[title]').forEach(trEl);
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;const list=[];while((n=w.nextNode()))list.push(n);
+  for(const x of list){if(x.parentElement&&x.parentElement.closest(I18N_SKIP))continue;const v=trText(x.nodeValue);if(v!==x.nodeValue)x.nodeValue=v}}
+function setLang(l){try{localStorage.setItem(LANG_KEY,l)}catch(e){}location.reload()}
+document.documentElement.lang=LANG;
+if(LANG==='hu'){
+  trTree(document.body);
+  new MutationObserver(ms=>{for(const m of ms){
+    if(m.type==='characterData')trTree(m.target);
+    else if(m.type==='attributes')trEl(m.target);
+    else m.addedNodes.forEach(trTree)}})
+  .observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});
+}
+
 {
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -499,6 +685,7 @@ function grow(act,id,label,right='',sub=''){return `<button class="grow" data-ac
 function vSettings(){
   const c=n=>`<span class="cnt">${n}</span>`;
   return `<div class="lt"><h1>Settings</h1></div><div class="status"><span class="dot ${S.on?'on':''}" id="stDot"></span><span id="stTxt">${esc(statusTxt)}</span></div>${banner()}
+  <h2 class="gh">Language</h2><div class="group">${grow('lang','','Language',`<span class="val" data-noi18n>${LANG==='hu'?'Magyar':'English'}</span>`)}</div>
   <h2 class="gh">Account</h2><div class="group">${grow('acct','','Signed in as',`<span class="val">${esc(userEmail)}</span>`)}${grow('logout','','Log out')}</div>${driveGroup()}
   <h2 class="gh">Backup</h2><div class="group">${grow('page','backup','Export Backup','','Copy all your data as text')}${grow('page','restore','Import Backup','','Restore data from a previous backup')}</div>
   <h2 class="gh">Studio</h2><div class="group">${grow('page','firings','Firing Log',c(S.firings.length))}${grow('page','shrink','Shrinkage Calculator')}</div>
@@ -871,6 +1058,7 @@ const A={
   stadd:async()=>{const v=$('#newStage').value.trim();if(!v||stages().includes(v))return;const s=clone(S.settings);s.stages.push(v);try{await putSettings(s);render()}catch(e){saveErr(e)}},
   bkcopy:async()=>{try{await navigator.clipboard.writeText($('#bkText').value);toast('Copied')}catch(e){$('#bkText').select();toast('Select all and copy')}},
   bkload:()=>restore(),
+  lang:()=>setLang(LANG==='hu'?'en':'hu'),
   migrate:()=>migrate(),
   logout:async()=>{try{await sb.auth.signOut()}catch(e){}location.reload()},
   acct:()=>{},
@@ -1036,9 +1224,9 @@ function authView(mode,note){
   else if(mode==='check')body=`<div class="panel"><p style="margin:0">${esc(note||'')}</p></div>
     <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">Back to log in</button></div>`;
   else if(mode==='down')body=`<div class="panel"><p style="margin:0">Pottery Log could not load. Check your internet connection and reload the page.</p></div>`;
-  $('#authBox').innerHTML=head+body+'<p class="sub" style="font-size:13px;margin-top:8px"><a href="privacy.html" style="color:var(--mute)">Privacy policy</a></p>';
+  $('#authBox').innerHTML=head+body+'<p class="sub" style="font-size:13px;margin-top:8px"><a href="privacy.html" style="color:var(--mute)">Privacy policy</a> · <button class="lnk" type="button" data-am="lang" data-noi18n style="font-size:13px;padding:0;min-height:0">'+(LANG==='hu'?'English':'Magyar')+'</button></p>';
   const first=$('#authBox input');if(first&&matchMedia('(pointer:fine)').matches)first.focus()}
-$('#auth').addEventListener('click',e=>{const b=e.target.closest('[data-am=go]');if(b){e.preventDefault();authView(b.dataset.to)}});
+$('#auth').addEventListener('click',e=>{if(e.target.closest('[data-am=lang]')){setLang(LANG==='hu'?'en':'hu');return}const b=e.target.closest('[data-am=go]');if(b){e.preventDefault();authView(b.dataset.to)}});
 $('#auth').addEventListener('submit',async e=>{
   e.preventDefault();const form=e.target,mode=form.dataset.am,btn=form.querySelector('button[type=submit]'),err=$('#aErr');
   const email=($('#aEmail')&&$('#aEmail').value||'').trim(),pw=$('#aPw')&&$('#aPw').value||'';
