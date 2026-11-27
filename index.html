@@ -1232,7 +1232,7 @@ const mkAssets=()=>({
   delete:async id=>{if(String(id).startsWith(me.id+'/'))await sb.storage.from('photos').remove([id])}});
 
 /* ---------- CAPTCHA (Cloudflare Turnstile) ---------- */
-const TS_KEY='';
+const TS_KEY='0x4AAAAAAGVc2n-xx07W315R';
 let capTok=null,capId=null;
 function loadTurnstile(){return new Promise(res=>{if(window.turnstile)return res(true);
   let sc=document.getElementById('tsjs');if(!sc){sc=document.createElement('script');sc.id='tsjs';sc.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';sc.async=true;document.head.appendChild(sc)}
