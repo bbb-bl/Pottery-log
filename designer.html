@@ -155,6 +155,14 @@ h1{letter-spacing:-.02em}
 .svgbox .bg{fill:light-dark(#fbf7f2,#1f1a17)}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
 .back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:22px;text-decoration:none;color:var(--ink);font-weight:600;background:var(--surface);border:1px solid var(--glb);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.skrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#skImg{width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.skover{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13.5px}.skover input{width:20px;height:20px;accent-color:var(--accent)}
+.svgbox .ghost{fill-opacity:.35}
+dialog.ai{border:1px solid var(--glb);border-radius:24px;padding:18px;max-width:420px;color:var(--ink);background:light-dark(rgba(255,255,255,.9),rgba(38,32,28,.92));-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+dialog.ai::backdrop{background:rgba(30,18,10,.35)}
+dialog.ai h3{margin:0 0 8px;font:700 19px var(--f-display)}dialog.ai p{margin:0 0 10px;font-size:14.5px}
 .mkpiece{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:6px}
 </style>
 
@@ -171,6 +179,21 @@ h1{letter-spacing:-.02em}
       <section class="panel">
         <h2>Start from</h2>
         <div class="presets" id="presets"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="skH" id="skPanel">
+        <h2 id="skH">From a sketch</h2>
+        <p class="empty" style="margin:0 0 10px">Upload a drawing or a photo of your sketch. AI reads the shape and sets the controls for you. Written measurements are used when it can read them.</p>
+        <div class="skrow">
+          <label class="btn" for="skFile" style="display:inline-flex;align-items:center">Choose sketch</label>
+          <input type="file" id="skFile" accept="image/*" class="vh">
+          <img id="skImg" alt="Your sketch" hidden>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button type="button" class="btn btn--primary" id="skBtn" disabled>Recreate from sketch</button>
+        </div>
+        <label class="skover"><input type="checkbox" id="skOver" disabled> Show sketch behind the section</label>
+        <p class="status" id="skStatus" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel" id="controls"></section>
@@ -579,7 +602,8 @@ h1{letter-spacing:-.02em}
     for (gy = Math.ceil((H - y1) / 10) * 10; gy <= H - y0; gy += 10) { var yy = H - gy; svg.push('<line class="' + (gy % 50 === 0 ? 'g-major' : 'g-minor') + '" x1="' + x0 + '" y1="' + yy + '" x2="' + x1 + '" y2="' + yy + '"/>'); }
     var outer = R.map(function (p) { return p[0].toFixed(2) + ',' + Y(p[1]); })
       .concat(L.slice().reverse().map(function (p) { return (-p[0]).toFixed(2) + ',' + Y(p[1]); }));
-    svg.push('<polygon class="outer" points="' + outer.join(' ') + '"/>');
+    if (V.sketch && skURL) svg.push('<image href="' + skURL + '" x="' + (x0 + pad * 0.5).toFixed(1) + '" y="0" width="' + (x1 - x0 - pad).toFixed(1) + '" height="' + H.toFixed(1) + '" preserveAspectRatio="xMidYMid meet" opacity="0.55"/>');
+    svg.push('<polygon class="outer' + (V.sketch && skURL ? ' ghost' : '') + '" points="' + outer.join(' ') + '"/>');
     var iR = innerPts(R, wallD), iL = innerPts(L, wallD);
     if (iR.length > 2 && iL.length > 2) {
       var inner = iR.map(function (p) { return p[0].toFixed(2) + ',' + Y(p[1]); })
@@ -803,7 +827,7 @@ h1{letter-spacing:-.02em}
   function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   var SB = window.supabase && window.supabase.createClient('https://bevwgmlsgbvgnptinisy.supabase.co', 'sb_publishable_93xtMcG6Lea4Qz5rzJEJEg_CkAdXb5z', { auth: { persistSession: true, autoRefreshToken: true } });
   var me = null;
-  function noAccount() { $('#saveBox').hidden = true; $('#saveUnavailable').hidden = false; $('#pieceBtn').closest('.mkpiece').hidden = true; }
+  function noAccount() { $('#skBtn').disabled = true; $('#saveBox').hidden = true; $('#saveUnavailable').hidden = false; $('#pieceBtn').closest('.mkpiece').hidden = true; }
   async function boot() {
     if (!SB) return noAccount();
     var s = await SB.auth.getSession(); me = s && s.data && s.data.session && s.data.session.user;
@@ -817,6 +841,97 @@ h1{letter-spacing:-.02em}
     renderSaved();
   }
   boot();
+
+  /* ---------- recreate from a sketch ---------- */
+  var skB64 = null, skURL = null;
+  function shrinkTo(file, max) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); rej(new Error('img')); };
+      img.src = u;
+    });
+  }
+  // The overlay uses the drawing only (empty paper trimmed), so its height matches the form's height.
+  function cropToDrawing(dataUrl) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width, h = img.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+        var x = c.getContext('2d'); x.drawImage(img, 0, 0); var px = x.getImageData(0, 0, w, h).data;
+        var sum = 0, n = 0, i; for (i = 0; i < px.length; i += 16) { sum += px[i] + px[i + 1] + px[i + 2]; n++; }
+        var bg = sum / n / 3, G = 4, gw = Math.ceil(w / G), gh = Math.ceil(h / G), grid = new Uint8Array(gw * gh);
+        for (var yy = 0; yy < h; yy += 2) for (var xx = 0; xx < w; xx += 2) { i = (yy * w + xx) * 4; if (bg - (px[i] + px[i + 1] + px[i + 2]) / 3 > 60) grid[((yy / G) | 0) * gw + ((xx / G) | 0)] = 1; }
+        // group touching marks; the drawing is the biggest group, plus any group that overlaps it (broken lines). Text beside it is left out.
+        var lab = new Int32Array(gw * gh), boxes = [], q = [];
+        for (var c0 = 0; c0 < gw * gh; c0++) { if (!grid[c0] || lab[c0]) continue; var bx = { x0: 1e9, y0: 1e9, x1: -1, y1: -1 }; lab[c0] = boxes.length + 1; q.length = 0; q.push(c0);
+          while (q.length) { var cc = q.pop(), cx = cc % gw, cy = (cc / gw) | 0; if (cx < bx.x0) bx.x0 = cx; if (cx > bx.x1) bx.x1 = cx; if (cy < bx.y0) bx.y0 = cy; if (cy > bx.y1) bx.y1 = cy;
+            for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) { var nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue; var nn = ny * gw + nx; if (grid[nn] && !lab[nn]) { lab[nn] = boxes.length + 1; q.push(nn); } } }
+          boxes.push(bx); }
+        if (!boxes.length) return res(dataUrl);
+        var area = function (b) { return (b.x1 - b.x0 + 1) * (b.y1 - b.y0 + 1); };
+        var big = boxes.reduce(function (a, b) { return area(b) > area(a) ? b : a; }), u = { x0: big.x0, y0: big.y0, x1: big.x1, y1: big.y1 };
+        boxes.forEach(function (b) { if (b !== big && b.x0 <= big.x1 && b.x1 >= big.x0 && b.y0 <= big.y1 && b.y1 >= big.y0) { u.x0 = Math.min(u.x0, b.x0); u.y0 = Math.min(u.y0, b.y0); u.x1 = Math.max(u.x1, b.x1); u.y1 = Math.max(u.y1, b.y1); } });
+        var minX = u.x0 * G, minY = u.y0 * G, maxX = Math.min(w - 1, u.x1 * G + G), maxY = Math.min(h - 1, u.y1 * G + G);
+        if ((maxX - minX) < 20 || (maxY - minY) < 20) return res(dataUrl);
+        var o = document.createElement('canvas'); o.width = maxX - minX + 1; o.height = maxY - minY + 1;
+        o.getContext('2d').drawImage(c, minX, minY, o.width, o.height, 0, 0, o.width, o.height);
+        o.toBlob(function (b) { res(b ? URL.createObjectURL(b) : dataUrl); }, 'image/png');
+      };
+      img.onerror = function () { res(dataUrl); };
+      img.src = dataUrl;
+    });
+  }
+  function skNote(t) { $('#skStatus').textContent = t; }
+  $('#skFile').addEventListener('change', async function () {
+    var f = this.files && this.files[0]; this.value = ''; if (!f) return;
+    try {
+      var d = await shrinkTo(f, 1024); skB64 = d.split(',')[1];
+      if (skURL) URL.revokeObjectURL(skURL);
+      skURL = await cropToDrawing(d);
+      $('#skImg').src = skURL; $('#skImg').hidden = false; $('#skBtn').disabled = !me; $('#skOver').disabled = false;
+      skNote(me ? 'Sketch ready. Tap Recreate from sketch.' : 'Log in to Pottery Log to use AI. You can still show the sketch behind the section.');
+    } catch (e) { skNote('That image could not be opened. Try another one.'); }
+  });
+  $('#skOver').addEventListener('change', function () { V.sketch = this.checked; renderSection(); });
+  function aiConsent() {
+    var key = 'pottery-log.aiok.' + (me && me.id);
+    try { if (localStorage.getItem(key) === '1') return Promise.resolve(true); } catch (e) {}
+    var dlg = $('#aiDlg');
+    if (!dlg.showModal) return Promise.resolve(window.confirm($('#aiDlg').innerText));
+    return new Promise(function (res) {
+      function done(ok) { $('#aiYes').onclick = $('#aiNo').onclick = null; dlg.onclose = null; if (dlg.open) dlg.close(); if (ok) try { localStorage.setItem(key, '1'); } catch (e) {} res(ok); }
+      $('#aiYes').onclick = function () { done(true); }; $('#aiNo').onclick = function () { done(false); }; dlg.onclose = function () { done(false); };
+      dlg.showModal();
+    });
+  }
+  var ranges = {}; GROUPS.forEach(function (g) { g.items.forEach(function (it) { ranges[it.k] = it; }); });
+  $('#skBtn').addEventListener('click', async function () {
+    var btn = this; if (!skB64 || !me || btn.disabled) return;
+    if (!(await aiConsent())) return;
+    btn.disabled = true; skNote('Reading your sketch…');
+    try {
+      var lang = (typeof LANG !== 'undefined' && LANG === 'hu') ? 'hu' : 'en';
+      var r = await SB.functions.invoke('name-piece', { body: { task: 'sketch', images: [skB64], lang: lang, targetH: P.H } });
+      if (r.error) { var code = 'failed'; try { code = (await r.error.context.json()).error || code; } catch (e) {} throw new Error(code); }
+      var got = (r.data && r.data.params) || {}, keep = { shrink: P.shrink, wall: P.wall }, next = withD(P);
+      Object.keys(got).forEach(function (k) { var it = ranges[k]; if (!it) return; var v = Math.round(got[k] / it.step) * it.step; next[k] = clamp(v, it.min, it.max); });
+      next.shrink = keep.shrink; next.wall = keep.wall;
+      P = next; currentId = null; if (!$('#name').value.trim()) $('#name').value = lang === 'hu' ? 'Vázlatból' : 'From sketch';
+      syncAll(); changed(); renderSaved();
+      V.sketch = true; $('#skOver').checked = true; renderSection();
+      skNote((r.data.note ? r.data.note + ' ' : '') + (typeof r.data.left === 'number' ? '(' + r.data.left + ' AI uses left today)' : ''));
+    } catch (e) {
+      var m = e && e.message;
+      skNote(m === 'daily_limit' ? 'You’ve used today’s 20 AI uses. Try again tomorrow.' : m === 'rate_limited' ? 'Too many requests right now. Try again in a little while.' : m === 'no_form' ? 'No vase shape could be read from that image. Try a clearer side view.' : m === 'not_signed_in' ? 'Log in to Pottery Log again to use AI.' : 'The sketch could not be read. Try again.');
+    }
+    btn.disabled = false;
+  });
 
   /* ---------- start a piece from the design ---------- */
   function snapshot() {
@@ -853,6 +968,7 @@ h1{letter-spacing:-.02em}
 })();
 </script>
 
+<dialog class="ai" id="aiDlg"><h3>Before using AI</h3><p>To read your sketch, Pottery Log sends a smaller copy of the image to Google’s Gemini service.</p><p>Pottery Log uses Gemini’s free version, so Google may keep what is sent, have people review it, and use it to improve its products. What has been sent cannot be called back.</p><p><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a></p><div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="aiNo">Cancel</button><button type="button" class="btn btn--primary" id="aiYes">Agree and continue</button></div></dialog>
 <script>
 /* ---------- language: English / Magyar ----------
    The app is written in English. In Hungarian mode every text the page shows is swapped
@@ -1067,6 +1183,14 @@ if(LANG==='hu'){
 }
 
 Object.assign(HU,{
+'From a sketch':'Vázlatból','Upload a drawing or a photo of your sketch. AI reads the shape and sets the controls for you. Written measurements are used when it can read them.':'Tölts fel egy rajzot vagy a vázlatod fotóját. Az AI kiolvassa a formát és beállítja helyetted a csúszkákat. Ha talál ráírt méreteket, azokat használja.',
+'Choose sketch':'Vázlat kiválasztása','Recreate from sketch':'Újraalkotás vázlatból','Show sketch behind the section':'Vázlat mutatása a metszet mögött','Your sketch':'A vázlatod',
+'Sketch ready. Tap Recreate from sketch.':'A vázlat kész. Koppints az Újraalkotás vázlatból gombra.','Log in to Pottery Log to use AI. You can still show the sketch behind the section.':'Az AI-hoz jelentkezz be a Pottery Logba. A vázlatot így is megmutathatod a metszet mögött.',
+'That image could not be opened. Try another one.':'Ezt a képet nem sikerült megnyitni. Próbálj egy másikat.','Reading your sketch…':'Vázlat olvasása…',
+'You’ve used today’s 20 AI uses. Try again tomorrow.':'Mára elhasználtad a 20 AI-használatot. Próbáld újra holnap.','No vase shape could be read from that image. Try a clearer side view.':'Ebből a képből nem sikerült vázaformát kiolvasni. Próbálj egy tisztább oldalnézetet.',
+'Log in to Pottery Log again to use AI.':'Az AI-hoz jelentkezz be újra a Pottery Logba.','The sketch could not be read. Try again.':'A vázlatot nem sikerült beolvasni. Próbáld újra.',
+'Before using AI':'Mielőtt az AI-t használod','To read your sketch, Pottery Log sends a smaller copy of the image to Google’s Gemini service.':'A vázlat beolvasásához a Pottery Log elküldi a kép kicsinyített másolatát a Google Gemini szolgáltatásának.',
+'Pottery Log uses Gemini’s free version, so Google may keep what is sent, have people review it, and use it to improve its products. What has been sent cannot be called back.':'A Pottery Log a Gemini ingyenes változatát használja, ezért a Google megőrizheti az elküldött anyagot, emberek is átnézhetik, és felhasználhatja a termékei fejlesztésére. Amit elküldtél, azt nem lehet visszavonni.',
 'Plan a coil-built form':'Hurkás építésű forma tervezése','Vase Designer':'Vázatervező',
 'Set the form in fired millimetres. You see it in 3D and as a true-scale section, then get the wet sizes to build to, a ring-by-ring coil sheet and a 1:1 profile template. Turn a design into a piece in your log when you start building it.':'Add meg a formát égetett milliméterben. 3D-ben és valós léptékű metszetben látod, és megkapod a nedves építési méreteket, a soronkénti hurkalapot és egy 1:1-es profilsablont. Ha elkezded építeni, a tervből darabot készíthetsz a naplódban.',
 'Start from':'Kiindulás','Shoulder vase':'Vállas váza','Double cone':'Dupla kúp','High edge, no neck':'Magas él, nyak nélkül','Faceted twist':'Fazettás csavart','Tilted edge':'Döntött él',
@@ -1089,6 +1213,7 @@ Object.assign(HU,{
 'Could not save. Try again.':'Nem sikerült menteni. Próbáld újra.','Saving designs isn’t set up yet on the server.':'A tervek mentése még nincs beállítva a szerveren.','Saved designs could not load right now.':'A mentett terveket most nem sikerült betölteni.'
 });
 HU_RX.unshift(
+ [/^(.*)\((\d+) AI uses left today\)$/,(m,a,n)=>a+'(ma még '+n+' AI-használat)'],
  [/^Convex (\d+)$/,(m,n)=>'Domború '+n],[/^Concave (\d+)$/,(m,n)=>'Homorú '+n],[/^(\d+) sides$/,(m,n)=>n+' oldal'],
  [/^build (\d+) mm wet$/,(m,n)=>'építés: '+n+' mm nedvesen'],[/^(\d+) mm up$/,(m,n)=>n+' mm magasan'],
  [/^(\d+)% of height(, tilted (-?\d+)°)?$/,(m,n,t,d)=>'a magasság '+n+'%-a'+(t?', '+d+'°-ban döntve':'')],
