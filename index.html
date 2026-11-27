@@ -8,6 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pottery Log">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f4ede5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15110f" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -268,6 +270,77 @@ input[type=email],input[type=password]{min-height:44px;border:0;border-radius:10
 .auth .box>div:first-child{text-align:center}
 .auth .agree{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--mute);margin-top:4px}.auth .agree input{width:22px;height:22px;flex:none;margin:0}.auth .agree a{color:var(--acc)}
 .dinfo p{margin:0 0 6px}.cfts{min-height:0}.cfts:not(:empty){min-height:65px}.dinfo ul{margin:0;padding-left:18px;display:grid;gap:6px}.dinfo b{color:var(--ink);font-weight:600}
+/* ---------- Glass theme (Pottery Log 2) ---------- */
+:root{--ink:light-dark(#2a1d16,#f5efe9);--mute:light-dark(#76655a,#a89a8e);--line:light-dark(rgba(120,90,70,.16),rgba(255,255,255,.12));--acc:light-dark(#8a4b2f,#e3a37f);--accInk:light-dark(#fff,#2a1d16);--clay:light-dark(#e4d6c7,#3a2f28);
+--gl:light-dark(rgba(255,255,255,.46),rgba(46,38,33,.46));--glx:light-dark(rgba(255,255,255,.78),rgba(38,32,28,.82));--glb:light-dark(rgba(255,255,255,.72),rgba(255,255,255,.14));--glh:light-dark(rgba(255,255,255,.95),rgba(255,255,255,.18));--gsh:light-dark(rgba(60,35,20,.13),rgba(0,0,0,.42));
+--card:var(--gl);--fill:light-dark(rgba(255,255,255,.55),rgba(255,255,255,.08));--bg:light-dark(#f4ede5,#15110f);--ok:light-dark(#2f7d5b,#5fd39a);
+--ground:radial-gradient(70vmax 70vmax at -15% -10%,light-dark(rgba(201,120,82,.55),rgba(201,120,82,.26)),transparent 60%),radial-gradient(60vmax 60vmax at 115% 45%,light-dark(rgba(95,143,134,.5),rgba(95,143,134,.24)),transparent 60%),radial-gradient(55vmax 55vmax at 15% 115%,light-dark(rgba(255,171,1,.3),rgba(255,171,1,.12)),transparent 60%),linear-gradient(170deg,light-dark(#f6efe7,#1c1714),light-dark(#ece3d8,#110e0c))}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI",Roboto,system-ui,sans-serif}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:var(--ground);pointer-events:none}
+.group,.panel,.card,fieldset,.scard,.banner,.prow .pinfo,.frow2,.phtile,.dchip,.aibtn,.aichip,.pill:not(.pri),.fchip:not(.on),.notes,.ebody .layer,.gz-card,.st-card,.cnt,.prow .badge{background:var(--gl)!important;-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--glb)!important;box-shadow:inset 0 1px 0 var(--glh),0 8px 26px var(--gsh)}
+.group,.panel,.card,fieldset,.banner{border-radius:22px}
+.lt h1{font-size:36px;letter-spacing:-.02em}
+.pill.pri,.btn.pri,.savepill,.bigbtn,.fchip.on{background:var(--acc);color:var(--accInk);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px light-dark(rgba(138,75,47,.3),rgba(0,0,0,.4))}
+.plus{background:var(--accInk);color:var(--acc)}
+/* bars */
+.sbar,.subnav,.sheetbar{background:var(--gl);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--glb);box-shadow:0 6px 20px var(--gsh)}
+.sheet{background:var(--ground);background-color:var(--bg)}
+.tabbar{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));padding:0 4px;border-radius:28px;grid-template-columns:repeat(5,1fr);background:var(--gl);-webkit-backdrop-filter:blur(26px) saturate(190%);backdrop-filter:blur(26px) saturate(190%);border:1px solid var(--glb);box-shadow:inset 0 1px 0 var(--glh),0 12px 34px var(--gsh);max-width:560px;margin:0 auto}
+.tab{min-height:54px;font-size:10.5px;font-weight:600;gap:2px;border-radius:22px;margin:3px 0}
+.tab svg{width:24px;height:24px}
+.tab[aria-current=page]{background:light-dark(rgba(255,255,255,.6),rgba(255,255,255,.1))}
+.bulkbar{left:12px;right:12px;bottom:calc(80px + env(safe-area-inset-bottom));border-radius:22px;background:var(--glx);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border:1px solid var(--glb);box-shadow:0 10px 30px var(--gsh)}
+.modal{background:light-dark(rgba(40,25,15,.28),rgba(0,0,0,.5));-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mbox{background:var(--glx);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--glb);border-radius:26px}
+.toast{background:light-dark(rgba(42,29,22,.86),rgba(245,239,233,.9));-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.qa,.layer,.logrow,.pick{background:var(--fill)}
+.qa>button{background:transparent}
+/* My Pieces: photo cards */
+.flist{border:0;padding:0 16px;display:grid;gap:6px}
+.frow2{border-radius:18px;min-height:54px;font-size:17px;font-weight:600}
+.shead{background:none;border:0;padding:14px 2px 2px;min-height:44px;font-size:22px}
+.srows,.rlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;background:none;border:0;padding:6px 0 4px}
+.rlist{padding:6px 16px}
+.prow{position:relative;display:block;height:212px;min-height:0;padding:0;border:0;border-radius:24px;overflow:hidden;background:var(--clay);box-shadow:0 10px 26px var(--gsh);transition:transform .15s}
+.prow:active{transform:scale(.98)}
+.prow .thumb{position:absolute;inset:0;width:100%;height:100%;border-radius:0;background:linear-gradient(160deg,light-dark(#efe6dc,#3a2f28),light-dark(#dccab8,#2a221d))}
+.prow .thumb svg{width:70px;height:70px;opacity:.55}
+.prow .pinfo{position:absolute;left:8px;right:8px;bottom:8px;border-radius:16px;padding:8px 10px;gap:2px}
+.prow .pt{font-size:13.5px}
+.prow .meta{font-size:11.5px;flex-wrap:nowrap;overflow:hidden}
+.prow .strip{height:5px;max-width:none;margin-top:3px}
+.prow .badge{position:absolute;top:8px;right:8px;font-size:11px}
+.prow .ck{position:absolute;top:8px;left:8px;z-index:2;background:rgba(255,255,255,.75)}
+.prow>.chev-r{display:none}
+.prow.sel{outline:3px solid var(--acc);outline-offset:-3px}
+.carousel figure{border-radius:26px}
+/* Glazes */
+.gz-kinds{display:flex;gap:8px;overflow-x:auto;padding:0 16px 4px;scrollbar-width:none}
+.gz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;padding:12px 16px}
+.gz-card{border-radius:24px;padding:12px;text-align:left;display:grid;gap:8px;color:var(--ink)}
+.gz-tile{height:112px;border-radius:16px;position:relative;overflow:hidden;background:linear-gradient(180deg,light-dark(#efe6dc,#3a2f28),light-dark(#d9c8b6,#2a221d))}
+.gz-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gz-tile i{position:absolute;left:22%;right:22%;top:14px;bottom:0;border-radius:8px 8px 0 0;box-shadow:inset 6px 0 14px rgba(255,255,255,.35),0 6px 14px rgba(40,25,15,.2)}
+.gz-card b{font-size:15px}.gz-card small{font-size:12.5px;color:var(--mute)}
+.gz-hero{margin:12px 16px 0;height:220px;border-radius:26px}
+.gz-hero i{top:26px}
+.gz-up{position:absolute;right:10px;bottom:10px;min-height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--ink);background:var(--glx);border:1px solid var(--glb);cursor:pointer}
+.gz-up input{position:absolute;width:1px;height:1px;opacity:0}
+/* Stats */
+.st-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0 16px}
+.st-card{border-radius:20px;padding:12px}
+.st-card b{display:block;font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1}.st-card span{font-size:12.5px;font-weight:600;color:var(--mute)}
+.st-bars{display:grid;gap:9px}
+.st-bar{display:grid;grid-template-columns:86px minmax(0,1fr) 28px;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.st-bar>span:first-child{color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-track{height:12px;border-radius:6px;background:light-dark(rgba(120,90,70,.12),rgba(255,255,255,.08));overflow:hidden}.st-track i{display:block;height:100%;border-radius:6px}
+.st-bar>span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.st-months{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end;height:130px}
+.st-months div{display:grid;gap:4px;justify-items:center;align-content:end;height:100%;font-size:11.5px;font-weight:600;color:var(--mute)}
+.st-months i{width:100%;max-width:34px;border-radius:8px 8px 4px 4px;background:var(--acc);min-height:3px}
+@media(prefers-reduced-transparency:reduce){:root{--gl:var(--glx)}}
+.gz-up svg{width:20px;height:20px;flex:none}
+.prow .pinfo{background:light-dark(rgba(255,255,255,.64),rgba(36,30,26,.66))!important}
 </style>
 </head>
 <body>
@@ -283,9 +356,11 @@ input[type=email],input[type=password]{min-height:44px;border:0;border-radius:10
 </div>
 
 <nav class="tabbar" aria-label="Sections">
-  <button class="tab" data-act="tab" data-id="pieces"><svg viewBox="0 0 28 28" fill="currentColor"><rect x="7" y="3.5" width="14" height="2" rx="1"/><rect x="5.5" y="6.5" width="17" height="2" rx="1"/><rect x="3.5" y="9.5" width="21" height="15" rx="3.5"/><rect x="7" y="14" width="8" height="2" rx="1" fill="var(--card)"/><rect x="7" y="18" width="6" height="2" rx="1" fill="var(--card)"/><circle cx="20" cy="16.5" r="2.4" fill="var(--card)"/></svg>My Pieces</button>
-  <button class="tab" data-act="tab" data-id="search"><svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12.5" cy="12.5" r="7.5"/><path d="M18 18l6 6"/></svg>Search</button>
-  <button class="tab" data-act="tab" data-id="settings"><svg viewBox="0 0 28 28" fill="currentColor"><path d="M12 3h4l.7 3.1 2 .9 2.8-1.7 2.8 2.8-1.7 2.8.9 2 3.1.7v4l-3.1.7-.9 2 1.7 2.8-2.8 2.8-2.8-1.7-2 .9L16 25h-4l-.7-3.1-2-.9-2.8 1.7-2.8-2.8 1.7-2.8-.9-2L1.4 16v-4l3.1-.7.9-2-1.7-2.8 2.8-2.8 2.8 1.7 2-.9z"/><circle cx="14" cy="14" r="4" fill="var(--card)"/></svg>Settings</button>
+  <button class="tab" data-act="tab" data-id="pieces"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Pieces</button>
+  <button class="tab" data-act="tab" data-id="glazes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3.2 4.2 6 7.2 6 11a6 6 0 0 1-12 0c0-3.8 2.8-6.8 6-11z"/></svg>Glazes</button>
+  <button class="tab" data-act="tab" data-id="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 20v-8M12 20V5M19 20v-5"/></svg>Stats</button>
+  <button class="tab" data-act="tab" data-id="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</button>
+  <button class="tab" data-act="tab" data-id="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
 </nav>
 
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
@@ -415,6 +490,11 @@ const HU={
 'You’ve used today’s 20 name suggestions. Try again tomorrow.':'Mára elhasználtad a 20 névjavaslatot. Próbáld újra holnap.',
 'You’re offline. This change was not saved.':'Nincs internetkapcsolat. Ez a módosítás nem mentődött el.',
 'Offline: showing your log from the last time you were online. Changes can’t be saved until you’re back online.':'Offline: a naplódat a legutóbbi online állapot szerint látod. Módosítani csak újra online lehet.',
+'Pieces':'Darabok','Stats':'Statisztika','Statistics':'Statisztika','Replace photo':'Fotó cseréje','Add test tile photo':'Próbalap fotó hozzáadása','Kind':'Típus','Used on':'Használva','Brand or recipe':'Márka vagy recept','Average coats':'Átlagos rétegszám',
+'Where your pieces are':'Hol tartanak a darabjaid','New pieces per month':'Új darabok havonta','Most used glazes':'Leggyakoribb mázak','Clay bodies':'Agyagok','Shrinkage per clay':'Zsugorodás agyagonként',
+'From pieces measured at two or more stages':'Legalább két szakaszban mért darabok alapján','Glazes used':'Használt máz','Not set':'Nincs megadva','Not used on any piece yet.':'Még egy darabon sincs használva.',
+'Saving photo…':'Fotó mentése…','Photo saved':'Fotó mentve','No pieces yet':'Még nincs darab','Add glaze layers to your pieces to see them here.':'Adj mázrétegeket a darabjaidhoz, és itt megjelennek.',
+'to add one, or add a layer to a piece and it appears here.':'gombra egy új hozzáadásához, vagy adj réteget egy darabhoz, és itt megjelenik.',
 /* stages, statuses (saved data stays English) */
 'Idea':'Ötlet','Formed':'Formázva','Trimmed':'Esztergálva','Bisqued':'Zsengélve','Glazed':'Mázazva','Finished':'Kész','Wet':'Nedves','Leather hard':'Bőrkemény','Bone dry':'Csontszáraz','Bisque fired':'Zsengélve','Glaze fired':'Mázégetve',
 'Not for sale':'Nem eladó','Available':'Eladó','Sold':'Eladva','Gifted':'Elajándékozva','Traded':'Elcserélve',
@@ -441,6 +521,11 @@ const HU_RX=[
  [/^Date: Today • (.+)$/,(m,s)=>'Dátum: ma • '+s],
  [/^Date: (.+)$/,(m,s)=>'Dátum: '+s],
  [/^(.+): (\d+)$/,(m,s,n)=>HU[s]?HU[s]+': '+n:null],
+ [/^(\d+) in library · used on (\d+) pieces?$/,(m,a,b)=>a+' a könyvtárban · '+b+' darabon használva'],
+ [/^Used on (\d+) pieces?$/,(m,n)=>n+' darabon használva'],
+ [/^Pieces with (.+)$/,(m,s)=>'Darabok ezzel: '+s],
+ [/^Since (.+)$/,(m,s)=>s+' óta'],
+ [/^No (glaze|underglaze|slip|oxide|stain)s yet\. Tap$/,(m,k)=>({glaze:'Még nincs máz',underglaze:'Még nincs alámáz',slip:'Még nincs engób',oxide:'Még nincs oxid',stain:'Még nincs pigment'})[k]+'. Koppints az'],
  [/^(\d+) left today$/,(m,n)=>'Ma még '+n],
  [/^(\d+) selected$/,(m,n)=>n+' kijelölve'],
  [/^(\d+) waiting$/,(m,n)=>n+' vár'],
@@ -564,7 +649,7 @@ const lsDel=k=>{try{localStorage.removeItem(LS+k)}catch(e){}};
 
 let S={pieces:[],firings:[],settings:fixSettings(null)};
 let db=null,assets=null,cloud=false,statusTxt='Connecting…',userEmail='';
-let view=lsGet('view','pieces');if(!['pieces','search','settings'].includes(view))view='pieces';
+let view=lsGet('view','pieces');if(!['pieces','glazes','stats','search','settings'].includes(view))view='pieces';
 let page=null,stEdit=false,pickKey=null;
 let q='',sortBy='new';
 const FKEYS=['arch','stage','status','glaze','underglaze','slip','oxide','stain','location','clay','form','forming'];
@@ -633,10 +718,62 @@ function dataToBlob(d){const [h,b]=d.split(',');const bin=atob(b);const u=new Ui
 async function storePhoto(blob){if(cloud&&assets){const r=await assets.upload(blob);return{aid:r.id,src:r.url||('/_blob/'+r.id)}}return{src:await blobToData(blob)}}
 
 /* ---------- views ---------- */
+/* ---------- Glazes tab ---------- */
+let gzKind=lsGet('gzKind','glaze');if(!KC[gzKind])gzKind='glaze';
+function gzItems(k){const used=S.pieces.flatMap(p=>p.layers.filter(l=>l.kind===k&&l.name));
+  const names=[...new Set([...libNames(k),...used.map(l=>l.name)])];
+  return names.map(n=>{const it=lib(k).find(x=>x.name.toLowerCase()===n.toLowerCase());const ly=used.find(l=>l.name.toLowerCase()===n.toLowerCase()&&isHex(l.color));
+    const color=it&&isHex(it.color)?it.color:ly?ly.color:KC[k][2];return {name:it?it.name:n,it,color,photo:it&&it.photo,n:usage(k,n).length}}).sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name))}
+function gzTile(g,hero){const src=g.photo&&safeSrc(g.photo.src);
+  return `<div class="gz-tile${hero?' gz-hero':''}">${src?`<img src="${esc(src)}" alt="${esc(g.name)} test tile">`:`<i style="background:linear-gradient(180deg,${g.color} 0%,${g.color} 62%,color-mix(in srgb,${g.color} 70%,#fff) 78%,transparent 79%)"></i>`}${hero?`<label class="gz-up">${IC.cam}<span>${src?'Replace photo':'Add test tile photo'}</span><input type="file" id="gzPh" accept="image/*"></label>`:''}</div>`}
+function vGlazes(){
+  const items=gzItems(gzKind),pieces=new Set(S.pieces.filter(p=>p.layers.some(l=>l.kind===gzKind)).map(p=>p.id)).size;
+  return `<div class="lt"><div class="ltbar"><span></span><button class="pill pri" data-act="gznew">New <span class="plus">+</span></button></div><h1>Glazes</h1></div>
+   <div class="status"><span>${items.length} in library · used on ${pieces} piece${pieces===1?'':'s'}</span></div>
+   <div class="gz-kinds" role="toolbar" aria-label="Kind">${KINDS.map(([k,l])=>`<button class="fchip ${k===gzKind?'on':''}" data-act="gzkind" data-id="${k}">${esc(KC[k][1]+'s')}</button>`).join('')}</div>
+   ${items.length?`<div class="gz-grid">${items.map(g=>`<button class="gz-card" data-act="gzopen" data-id="${esc(g.name)}">${gzTile(g)}<b>${esc(g.name)}</b><small>Used on ${g.n} piece${g.n===1?'':'s'}</small></button>`).join('')}</div>`
+   :`<div class="empty"><p>No ${esc(KC[gzKind][1].toLowerCase())}s yet. Tap <b>New</b> to add one, or add a layer to a piece and it appears here.</p></div>`}`}
+function vGlazePage(){
+  const g=gzItems(page.c).find(x=>x.name===page.n)||{name:page.n,color:KC[page.c][2],n:0};const used=usage(page.c,g.name).sort(byNew);
+  const it=g.it||{};const coats=used.map(p=>p.layers.filter(l=>l.kind===page.c&&l.name.toLowerCase()===g.name.toLowerCase()).reduce((a,l)=>a+(+l.coats||1),0));
+  const avg=coats.length?(coats.reduce((a,b)=>a+b,0)/coats.length):null;
+  return nav(KC[page.c][1],`<button class="navb r" data-act="gzedit">Edit</button>`)+gzTile(g,true)+
+   `<div class="lt" style="padding-top:16px"><h1 style="font-size:30px">${esc(g.name)}</h1></div>
+   <div class="panel"><dl class="facts">${[['Kind',KC[page.c][1]],['Brand or recipe',it.brand],['Used on',g.n+' piece'+(g.n===1?'':'s')],['Average coats',avg!=null?avg.toFixed(1):'']].filter(x=>x[1]).map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>${it.notes?`<div style="white-space:pre-wrap">${esc(it.notes)}</div>`:''}</div>
+   <h2 class="gh">Pieces with ${esc(g.name)}</h2>${used.length?`<div class="rlist">${used.map(prow).join('')}</div>`:'<p class="intro hint">Not used on any piece yet.</p>'}`}
+async function gzPhoto(f){
+  if(!f)return;const k=page.c,n=page.n;toast('Saving photo…');
+  try{const blob=await shrinkImg(f,1400);const ph=await storePhoto(blob);const s=clone(S.settings);s.lib[k]=s.lib[k]||[];
+    let it=s.lib[k].find(x=>x.name.toLowerCase()===n.toLowerCase());
+    if(!it){const g=gzItems(k).find(x=>x.name===n);it={id:uid(),name:n,color:g?g.color:KC[k][2]};s.lib[k].push(it)}
+    const old=it.photo;it.photo=ph;await putSettings(s);if(old&&old.aid&&assets)try{await assets.delete(old.aid)}catch(e){}
+    toast('Photo saved');render()}catch(e){saveErr(e)}}
+
+/* ---------- Stats tab ---------- */
+function vStats(){
+  const all=S.pieces,act=all.filter(p=>p.status!=='Archived'),st=stages(),last=st[st.length-1];
+  const glz={};all.forEach(p=>p.layers.forEach(l=>{if(l.kind==='glaze'&&l.name){const k=l.name;glz[k]=glz[k]||{n:0,c:l.color,ids:new Set()};glz[k].ids.add(p.id);if(isHex(l.color))glz[k].c=l.color}}));
+  const gl=Object.entries(glz).map(([n,v])=>({n,c:isHex(v.c)?v.c:KC.glaze[2],v:v.ids.size})).sort((a,b)=>b.v-a.v).slice(0,8);
+  const cnt=key=>{const m={};act.forEach(p=>{const v=p[key]||'Not set';m[v]=(m[v]||0)+1});return Object.entries(m).sort((a,b)=>(a[0]==='Not set')-(b[0]==='Not set')||b[1]-a[1]).slice(0,6)};
+  const now=new Date(),months=[];for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({y:d.getFullYear(),m:d.getMonth(),l:d.toLocaleDateString(LANG==='hu'?'hu-HU':undefined,{month:'short'}),n:0})}
+  all.forEach(p=>{const d=new Date(p.created);const mm=months.find(x=>x.y===d.getFullYear()&&x.m===d.getMonth());if(mm)mm.n++});
+  const mx=Math.max(1,...months.map(x=>x.n)),smax=Math.max(1,...st.map(s=>act.filter(p=>p.stage===s).length));
+  const bar=(label,n,max,color)=>`<div class="st-bar"><span>${esc(label)}</span><span class="st-track"><i style="width:${Math.round(n/max*100)}%;background:${color}"></i></span><span>${n}</span></div>`;
+  const clays=cnt('clay'),forms=cnt('form'),cmax=Math.max(1,...clays.map(x=>x[1])),fmax=Math.max(1,...forms.map(x=>x[1]));
+  const first=all.length?new Date(Math.min(...all.map(p=>p.created))):null;
+  return `<div class="lt"><h1>Statistics</h1></div><div class="status"><span>${first?'Since '+esc(first.toLocaleDateString()):'No pieces yet'}</span></div>
+   <div class="st-kpis"><div class="st-card"><b>${act.length}</b><span>Pieces</span></div><div class="st-card"><b>${act.filter(p=>p.stage===last).length}</b><span>${esc(last||'Finished')}</span></div><div class="st-card"><b>${gl.length}</b><span>Glazes used</span></div></div>
+   <h2 class="gh">Where your pieces are</h2><div class="panel"><div class="st-bars">${st.map((s,i)=>bar(s,act.filter(p=>p.stage===s).length,smax,i===st.length-1?'var(--ok)':'var(--acc)')).join('')}</div></div>
+   <h2 class="gh">New pieces per month</h2><div class="panel"><div class="st-months">${months.map(x=>`<div><span style="color:var(--ink)">${x.n||''}</span><i style="height:${Math.round(x.n/mx*90)}px"></i><span>${esc(x.l)}</span></div>`).join('')}</div></div>
+   <h2 class="gh">Most used glazes</h2><div class="panel">${gl.length?`<div class="st-bars">${gl.map(g=>bar(g.n,g.v,gl[0].v,g.c)).join('')}</div>`:'<p class="hint">Add glaze layers to your pieces to see them here.</p>'}</div>
+   <h2 class="gh">Clay bodies</h2><div class="panel"><div class="st-bars">${clays.map(([n,v])=>bar(n,v,cmax,n==='Not set'?'var(--line)':'#b48a6a')).join('')}</div></div>
+   <h2 class="gh">Forms</h2><div class="panel"><div class="st-bars">${forms.map(([n,v])=>bar(n,v,fmax,n==='Not set'?'var(--line)':'#5f8f86')).join('')}</div></div>
+   <div class="group" style="margin-top:22px">${grow('page','shrink','Shrinkage per clay','','From pieces measured at two or more stages')}</div>`}
+
 function render(){
   const ae=document.activeElement,aid=ae&&ae.id,pos=ae&&ae.selectionStart;
   $$('.tab').forEach(b=>b.setAttribute('aria-current',b.dataset.id===view?'page':'false'));
-  $('#main').innerHTML=page?vPage():view==='pieces'?vPieces():view==='search'?vSearch():vSettings();
+  $('#main').innerHTML=page?vPage():view==='pieces'?vPieces():view==='search'?vSearch():view==='glazes'?vGlazes():view==='stats'?vStats():vSettings();
   $('#bulkbar').hidden=!(view==='pieces'&&!page&&selectMode);$('#bulkCount').textContent=sel.size+' selected';
   fillDatalists();if(page&&page.k==='shrink')calc();
   if(sheet&&sheet.mode==='detail')renderDetail();
@@ -713,6 +850,7 @@ function vSettings(){
 function nav(title,right=''){return `<div class="subnav"><button class="navb" data-act="back" aria-label="Back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"/></svg></button><h2>${esc(title)}</h2>${right||'<span></span>'}</div>`}
 function vPage(){
   const k=page.k;
+  if(k==='glaze')return vGlazePage();
   if(k==='archived'){const ps=S.pieces.filter(p=>p.status==='Archived').sort(byNew);return nav('Archived')+(ps.length?`<p class="intro hint">Pieces that didn't work out, or that you want out of the way. Open one and use ⋯ to unarchive.</p><div class="rlist" style="margin-top:12px">${ps.map(prow).join('')}</div>`:'<div class="empty"><p>No archived pieces. Long-press a piece and choose Archive to move it here.</p></div>')}
   if(k==='cat'){matCat=page.c;const items=[...lib(matCat)].sort((a,b)=>a.name.localeCompare(b.name));
     const used=usedNotInLib(matCat);const vis=items.filter(x=>!x.hidden),hid=items.filter(x=>x.hidden);
@@ -1076,6 +1214,10 @@ const A={
   bkcopy:async()=>{try{await navigator.clipboard.writeText($('#bkText').value);toast('Copied')}catch(e){$('#bkText').select();toast('Select all and copy')}},
   bkload:()=>restore(),
   lang:()=>setLang(LANG==='hu'?'en':'hu'),
+  gzkind:id=>{gzKind=id;lsSet('gzKind',id);render()},
+  gzopen:id=>{page={k:'glaze',c:gzKind,n:id};render();window.scrollTo(0,0)},
+  gznew:()=>{matCat=gzKind;matEditor(null,null)},
+  gzedit:()=>{matCat=page.c;const g=gzItems(page.c).find(x=>x.name===page.n);if(g&&g.it)A.editmat(g.it.id);else A.editmat('v:'+page.n)},
   migrate:()=>migrate(),
   logout:async()=>{await clearLocal();try{await sb.auth.signOut()}catch(e){}location.reload()},
   acct:()=>{},
@@ -1166,6 +1308,7 @@ $('#sheet').addEventListener('input',e=>{const t=e.target;
       if(k==='color'||k==='name'||k==='area')renderXs()}}
   if(sheet&&sheet.mode==='firing'&&fe&&t.dataset.ff){fe[t.dataset.ff]=t.value;if(t.dataset.ff==='type'){const m=pickStage(t.value);if(m&&$('#fmoveTo'))$('#fmoveTo').value=m}}
 });
+$('#main').addEventListener('change',e=>{if(e.target.id==='gzPh'){gzPhoto(e.target.files[0]);e.target.value=''}});
 $('#main').addEventListener('change',async e=>{if(e.target.id!=='bkFile')return;const f=e.target.files[0];if(!f)return;try{$('#bkText').value=await f.text();toast('File loaded. Tap Restore.')}catch(err){toast('Could not read that file')}});
 $('#sheet').addEventListener('change',async e=>{const t=e.target;
   if(t.dataset.phst!=null&&ed){const ph=ed.photos[+t.dataset.phst];if(ph){if(t.value)ph.stage=t.value;else delete ph.stage}return}
@@ -1218,7 +1361,8 @@ function mkDb(){
         get,
         onSnapshot:(cb,err)=>watch(get,cb,err)}},
     doc(){const get=async()=>{let data;
-        try{const r=await sb.from('settings').select('data').maybeSingle();if(r.error)throw r.error;data=r.data;offSave('settings',data)}
+        try{const r=await sb.from('settings').select('data').maybeSingle();if(r.error)throw r.error;data=r.data;
+          if(data&&data.data&&data.data.lib)await signUrls(Object.values(data.data.lib).flat().map(x=>x&&x.photo).filter(Boolean));offSave('settings',data)}
         catch(e){const c=offLoad('settings');if(c===undefined)throw e;data=c}
         return{exists:!!data,data:()=>data&&data.data}};
       return{

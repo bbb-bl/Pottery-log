@@ -3,7 +3,7 @@
    - The login/database library: saved copy used, refreshed in the background.
    - Photos: saved after first view, so they show offline too.
    - Everything else (saving, logging in, Google) always goes to the network. */
-const SHELL_CACHE = 'pl-shell-v1';
+const SHELL_CACHE = 'pl-shell-v2';
 const PHOTO_CACHE = 'pl-photos-v1';
 const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
 const SHELL = ['./', './index.html', './privacy.html', './terms.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
