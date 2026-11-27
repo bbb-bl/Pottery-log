@@ -1036,7 +1036,7 @@ function authView(mode,note){
   else if(mode==='check')body=`<div class="panel"><p style="margin:0">${esc(note||'')}</p></div>
     <div class="row2"><span></span><button class="lnk" type="button" data-am="go" data-to="login">Back to log in</button></div>`;
   else if(mode==='down')body=`<div class="panel"><p style="margin:0">Pottery Log could not load. Check your internet connection and reload the page.</p></div>`;
-  $('#authBox').innerHTML=head+body;
+  $('#authBox').innerHTML=head+body+'<p class="sub" style="font-size:13px;margin-top:8px"><a href="privacy.html" style="color:var(--mute)">Privacy policy</a></p>';
   const first=$('#authBox input');if(first&&matchMedia('(pointer:fine)').matches)first.focus()}
 $('#auth').addEventListener('click',e=>{const b=e.target.closest('[data-am=go]');if(b){e.preventDefault();authView(b.dataset.to)}});
 $('#auth').addEventListener('submit',async e=>{
@@ -1159,7 +1159,7 @@ function driveGroup(){if(!me)return '';const s=dState(),n=s.pending.length;
     <li><b>Your own folder.</b> Each piece gets a folder inside “Pottery Log” in your Drive, with its photos and a piece.json file holding all its details.</li>
     <li><b>Reconnect about once an hour.</b> Google keeps the connection open for about an hour. After that your saves wait here (you’ll see “waiting”). Tap <b>Back up now</b> and they all go to Drive.</li>
     <li><b>Nothing is deleted from Drive.</b> Pieces and photos you delete in the app stay in Drive, because it’s a backup. Delete them in Drive yourself if you want them gone.</li>
-    <li><b>Private.</b> Pottery Log can only see the files it made itself, never anything else in your Drive.</li></ul></div>`;
+    <li><b>Private.</b> Pottery Log can only see the files it made itself, never anything else in your Drive.</li></ul><p style="margin-top:8px"><a href="privacy.html">Privacy policy</a></p></div>`;
   const foot=(gErr?'<p class="gfoot"><span style="color:var(--danger)">'+esc(gErr)+'</span></p>':'')+info;
   if(!s.on)return `<h2 class="gh">Google Drive</h2><div class="group">${grow('driveon','','Connect Google Drive','',esc('Back up every piece to a Pottery Log folder in your Drive'))}</div>${foot}`;
   const right=`<span class="val">${gBusy?'Working…':n?n+' waiting':'Up to date'}</span>`;
