@@ -1,0 +1,1103 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Vase Designer · Pottery Log</title>
+<meta name="theme-color" content="#f4ede5" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#15110f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-180.png"><link rel="manifest" href="manifest.webmanifest">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench — control rail on the left, live 3D form and true-scale section on the right, wet build sheet beneath */
+:root {
+  --bg: #e8eae9;
+  --surface: #f6f7f6;
+  --ink: #1a1d1e;
+  --muted: #586164;
+  --line: #cdd3d2;
+  --grid: #e1e5e4;
+  --grid-major: #c6cdcc;
+  --section: #d9dedd;
+  --accent: #865628;
+  --accent-soft: #eadfce;
+  --warn: #8a5410;
+  --warn-bg: #f4e7d1;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141617; --surface: #1d2021; --ink: #e6e9e8; --muted: #9ba4a6; --line: #30363a;
+  --grid: #222729; --grid-major: #353c3f; --section: #2b3133;
+  --accent: #d9a86f; --accent-soft: #3a2e20; --warn: #e8bf7a; --warn-bg: #3a2c16;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141617; --surface: #1d2021; --ink: #e6e9e8; --muted: #9ba4a6; --line: #30363a;
+  --grid: #222729; --grid-major: #353c3f; --section: #2b3133;
+  --accent: #d9a86f; --accent-soft: #3a2e20; --warn: #e8bf7a; --warn-bg: #3a2c16;
+  color-scheme: dark; }
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
+.wrap { max-width: 1380px; margin: 0 auto; padding-block: 24px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; margin-bottom: 20px; }
+.eyebrow { font: 500 12px/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(30px, 5.5vw, 48px); line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 4px 0 0; max-width: 64ch; color: var(--muted); }
+
+.app { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "rail"; }
+@media (min-width: 980px) {
+  .app { grid-template-columns: 330px minmax(0, 1fr); grid-template-areas: "rail stage"; align-items: start; }
+  .rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow-y: auto; }
+}
+.rail { grid-area: rail; display: grid; gap: 14px; min-width: 0; }
+.stage { grid-area: stage; display: grid; gap: 16px; min-width: 0; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.panel h2 { font: 600 12px/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.panel h3 { font-family: var(--f-display); font-weight: 500; font-size: 20px; margin: 0; line-height: 1.2; }
+
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip, .seg button, .btn {
+  font: 500 13px/1 var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 999px; padding: 9px 12px; cursor: pointer; min-height: 36px; }
+.chip:hover, .seg button:hover, .btn:hover { border-color: var(--accent); }
+.btn--primary { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; }
+.btn--primary:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.group { display: grid; gap: 12px; }
+.group + .group { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.ctl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13.5px; font-weight: 500; }
+.ctl .unit { font-size: 11.5px; color: var(--muted); margin-left: 4px; font-weight: 400; }
+.ctl input[type="range"] { grid-column: 1 / -1; width: 100%; margin: 2px 0 0; accent-color: var(--accent); height: 24px; }
+.ctl input[type="number"], .readout {
+  width: 78px; font: 500 13px var(--f-mono); text-align: right; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; font-variant-numeric: tabular-nums; box-sizing: border-box; }
+.readout { border-color: transparent; background: transparent; width: auto; min-width: 78px; }
+
+.views { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1200px) { .views { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
+.viewhead { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.seg { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.swatches { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+.sw[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+.canvasbox { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 620px; max-width: 100%; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
+#cv:active { cursor: grabbing; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+.svgbox { width: 100%; }
+.svgbox svg { width: 100%; height: auto; max-height: 620px; display: block; }
+.svgbox .g-minor { stroke: var(--grid); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.svgbox .g-major { stroke: var(--grid-major); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.svgbox .outer { fill: var(--section); stroke: var(--ink); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.svgbox .inner { fill: var(--surface); stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.svgbox .axis { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.svgbox .edge { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.svgbox .dim { stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.svgbox text { fill: var(--ink); font-family: var(--f-mono); }
+.svgbox text.acc { fill: var(--accent); }
+.svgbox text.mut { fill: var(--muted); }
+.svgbox .bg { fill: var(--surface); }
+
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
+@media (min-width: 700px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stats div { display: grid; gap: 2px; min-width: 0; }
+.stats dt { font: 500 11px/1.2 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.stats dd { margin: 0; font: 500 19px/1.25 var(--f-display); font-variant-numeric: tabular-nums; }
+.stats dd small { display: block; font: 400 12px/1.3 var(--f-body); color: var(--muted); }
+.advice { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; font-size: 14px; background: var(--bg); }
+.advice.is-warn { background: var(--warn-bg); color: var(--ink); }
+.advice b { color: var(--warn); }
+
+.tablebox { overflow-x: auto; margin-top: 6px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 420px; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); font-family: var(--f-mono); font-size: 13px; white-space: nowrap; }
+th { font: 500 11px/1.3 var(--f-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+th:first-child, td:first-child { text-align: left; }
+tr.is-edge td { color: var(--accent); font-weight: 500; background: var(--accent-soft); }
+.note { font-size: 13px; color: var(--muted); margin: 8px 0 0; max-width: 72ch; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sheethead { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; justify-content: space-between; }
+
+.namefield { display: grid; gap: 4px; margin-bottom: 10px; }
+.namefield label { font-size: 13px; color: var(--muted); }
+#name { font: 15px var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; box-sizing: border-box; }
+.saved { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.saved li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg); }
+.saved li.is-current { outline: 1.5px solid var(--accent); }
+.saved .nm { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.saved .meta { font-size: 12px; color: var(--muted); grid-column: 1; }
+.saved .acts { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 4px; }
+.saved .acts button { font: 500 12.5px/1 var(--f-body); padding: 8px 10px; min-height: 34px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.saved .acts button.danger { color: var(--warn); }
+.empty { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+.status { font-size: 13px; color: var(--accent); min-height: 1.4em; margin: 8px 0 0; }
+@media (prefers-reduced-motion: no-preference) { .chip, .seg button, .btn { transition: border-color .15s, background-color .15s; } }
+
+/* ---------- Pottery Log glass theme ---------- */
+:root{color-scheme:light dark;
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display",Inter,"Segoe UI",system-ui,sans-serif;--f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI",system-ui,sans-serif;
+  --bg:light-dark(rgba(255,255,255,.5),rgba(255,255,255,.07));--surface:light-dark(rgba(255,255,255,.46),rgba(46,38,33,.46));--ink:light-dark(#2a1d16,#f5efe9);--muted:light-dark(#76655a,#a89a8e);
+  --line:light-dark(rgba(120,90,70,.18),rgba(255,255,255,.13));--grid:light-dark(#efe7de,#2a231f);--grid-major:light-dark(#ddcfc1,#3d332d);--section:light-dark(#e6d6c5,#4a3c33);
+  --accent:light-dark(#8a4b2f,#e3a37f);--accent-soft:light-dark(rgba(138,75,47,.12),rgba(227,163,127,.14));--warn:light-dark(#8a5410,#e8bf7a);--warn-bg:light-dark(rgba(244,231,209,.8),rgba(58,44,22,.7));
+  --glb:light-dark(rgba(255,255,255,.72),rgba(255,255,255,.14));--glh:light-dark(rgba(255,255,255,.95),rgba(255,255,255,.18));--gsh:light-dark(rgba(60,35,20,.13),rgba(0,0,0,.42));
+  --ground:radial-gradient(70vmax 70vmax at -15% -10%,light-dark(rgba(201,120,82,.55),rgba(201,120,82,.26)),transparent 60%),radial-gradient(60vmax 60vmax at 115% 45%,light-dark(rgba(95,143,134,.5),rgba(95,143,134,.24)),transparent 60%),radial-gradient(55vmax 55vmax at 15% 115%,light-dark(rgba(255,171,1,.3),rgba(255,171,1,.12)),transparent 60%),linear-gradient(170deg,light-dark(#f6efe7,#1c1714),light-dark(#ece3d8,#110e0c))}
+body{background:light-dark(#f4ede5,#15110f);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:var(--ground);pointer-events:none}
+.panel{border-radius:22px;border:1px solid var(--glb);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:inset 0 1px 0 var(--glh),0 8px 26px var(--gsh)}
+h1{letter-spacing:-.02em}
+.btn--primary{color:light-dark(#fff,#2a1d16)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:light-dark(#fff,#2a1d16)}
+.svgbox .bg{fill:light-dark(#fbf7f2,#1f1a17)}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:22px;text-decoration:none;color:var(--ink);font-weight:600;background:var(--surface);border:1px solid var(--glb);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+.mkpiece{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:6px}
+</style>
+
+<div class="wrap">
+  <div class="topbar"><a class="back" href="./">‹ Pottery Log</a><span id="who" style="font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div>
+  <header>
+    <div class="eyebrow">Plan a coil-built form</div>
+    <h1>Vase Designer</h1>
+    <p class="lede">Set the form in fired millimetres. You see it in 3D and as a true-scale section, then get the wet sizes to build to, a ring-by-ring coil sheet and a 1:1 profile template. Turn a design into a piece in your log when you start building it.</p>
+  </header>
+
+  <div class="app">
+    <aside class="rail" aria-label="Form controls">
+      <section class="panel">
+        <h2>Start from</h2>
+        <div class="presets" id="presets"></div>
+      </section>
+
+      <section class="panel" id="controls"></section>
+
+      <section class="panel" aria-labelledby="savedH">
+        <h2 id="savedH">Saved designs</h2>
+        <div id="saveBox">
+          <div class="namefield">
+            <label for="name">Design name</label>
+            <input id="name" type="text" maxlength="60" placeholder="e.g. Edge high, 7 facets" autocomplete="off">
+          </div>
+          <div class="row">
+            <button type="button" class="btn btn--primary" id="saveBtn">Save</button>
+            <button type="button" class="btn" id="saveNewBtn">Save as new</button>
+          </div>
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+          <div class="mkpiece"><button type="button" class="btn" id="pieceBtn">Start a piece from this design</button><p class="empty" style="margin:0">Adds it to My Pieces as an Idea, with a 3D picture and the build sizes in its notes.</p></div>
+          <ul class="saved" id="savedList"></ul>
+          <p class="empty" id="savedEmpty">Saved designs appear here. Name a form and press Save to keep it.</p>
+        </div>
+        <p class="empty" id="saveUnavailable" hidden>Log in to Pottery Log to save designs. Your current form is still kept in this browser.</p>
+      </section>
+    </aside>
+
+    <main class="stage">
+      <div class="views">
+        <section class="panel" aria-labelledby="v3dH">
+          <div class="viewhead">
+            <h3 id="v3dH">Form</h3>
+            <div class="row">
+              <div class="seg" role="group" aria-label="Surface">
+                <button type="button" data-surface="raw" aria-pressed="true">Raw clay</button>
+                <button type="button" data-surface="top" aria-pressed="false">Glaze above edge</button>
+                <button type="button" data-surface="all" aria-pressed="false">Glaze, bare foot</button>
+              </div>
+            </div>
+          </div>
+          <div class="canvasbox"><canvas id="cv" aria-label="3D view of the vase. Drag to turn it."></canvas></div>
+          <div class="row" style="justify-content: space-between; margin-top: 6px;">
+            <p class="hint">Drag to turn and tilt. Glaze colours are rough stand-ins, not previews.</p>
+            <div class="row">
+              <div class="swatches" role="group" aria-label="Glaze colour">
+                <button type="button" class="sw" data-glaze="beige" aria-pressed="true" aria-label="Matte beige" style="background: #b9ab92"></button>
+                <button type="button" class="sw" data-glaze="grey" aria-pressed="false" aria-label="Pale grey" style="background: #9c9d99"></button>
+                <button type="button" class="sw" data-glaze="sepia" aria-pressed="false" aria-label="Sepia" style="background: #9b8466"></button>
+              </div>
+              <button type="button" class="btn" id="spinBtn" aria-pressed="true">Pause</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="secH">
+          <div class="viewhead">
+            <h3 id="secH">Section</h3>
+            <div class="seg" role="group" aria-label="Sizes shown">
+              <button type="button" data-unit="fired" aria-pressed="true">Fired</button>
+              <button type="button" data-unit="wet" aria-pressed="false">Wet build</button>
+            </div>
+          </div>
+          <div class="svgbox" id="svgbox"></div>
+          <p class="hint" id="secNote">10 mm grid. Shaded band is the wall and base at your wall thickness.</p>
+        </section>
+      </div>
+
+      <section class="panel" aria-labelledby="statsH">
+        <h2 id="statsH">Numbers</h2>
+        <dl class="stats" id="stats"></dl>
+        <p class="advice" id="advice"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="sheetH">
+        <div class="sheethead">
+          <div>
+            <h3 id="sheetH">Coil sheet</h3>
+            <p class="note" style="margin-top: 2px;">Wet sizes to build to, measured up from the bat. The circumference is roughly the coil length for that ring.</p>
+          </div>
+          <div class="row" id="dlRow">
+            <button type="button" class="btn btn--primary" id="tplBtn">Profile template (.svg)</button>
+            <button type="button" class="btn" id="csvBtn">Coil sheet (.csv)</button>
+          </div>
+        </div>
+        <div class="tablebox"><table id="sheet"></table></div>
+        <p class="note" id="dlNote">The template is the wet corner profile at 1:1. Print it at 100% and check the 100 mm bar before you cut a rib from card or plastic.</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var clamp = function (v, a, b) { return Math.min(b, Math.max(a, v)); };
+  var DEG = Math.PI / 180;
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+  var DEFAULTS = { H: 300, footD: 110, edgeD: 235, edgeAt: 66, mouthD: 105, neckH: 22, curveL: 0, curveU: 0, soft: 2, facL: 2, facU: 2, twist: 0, tilt: 0, wall: 9, shrink: 12 };
+  function withD(o) { var r = {}; for (var k in DEFAULTS) r[k] = DEFAULTS[k]; for (var k2 in o) r[k2] = o[k2]; return r; }
+  var PRESETS = [
+    { name: 'Shoulder vase', p: withD({}) },
+    { name: 'Double cone', p: withD({ H: 280, footD: 100, edgeD: 230, edgeAt: 50, mouthD: 90, neckH: 0, soft: 0 }) },
+    { name: 'High edge, no neck', p: withD({ footD: 95, edgeD: 240, edgeAt: 82, mouthD: 80, neckH: 0, soft: 0 }) },
+    { name: 'Faceted twist', p: withD({ facL: 7, facU: 5, twist: 40, soft: 0, neckH: 15, edgeAt: 70 }) },
+    { name: 'Tilted edge', p: withD({ tilt: 12, soft: 0 }) }
+  ];
+
+  var curveFmt = function (v) { return v === 0 ? 'Straight' : (v > 0 ? 'Convex ' + v : 'Concave ' + (-v)); };
+  var facetFmt = function (v) { return v < 3 ? 'Round' : v + ' sides'; };
+  var GROUPS = [
+    { title: 'Form', items: [
+      { k: 'H', label: 'Height', min: 80, max: 600, step: 5, unit: 'mm' },
+      { k: 'edgeAt', label: 'Edge height', min: 15, max: 92, step: 1, unit: '% of height' },
+      { k: 'footD', label: 'Foot Ø', min: 30, max: 400, step: 5, unit: 'mm' },
+      { k: 'edgeD', label: 'Edge Ø', min: 40, max: 500, step: 5, unit: 'mm' },
+      { k: 'mouthD', label: 'Mouth Ø', min: 20, max: 400, step: 5, unit: 'mm' },
+      { k: 'neckH', label: 'Collar height', min: 0, max: 120, step: 1, unit: 'mm' }
+    ] },
+    { title: 'Profile', items: [
+      { k: 'curveL', label: 'Lower wall', min: -100, max: 100, step: 5, fmt: curveFmt },
+      { k: 'curveU', label: 'Upper wall', min: -100, max: 100, step: 5, fmt: curveFmt },
+      { k: 'soft', label: 'Edge softness', min: 0, max: 30, step: 1, fmt: function (v) { return v === 0 ? 'Crisp' : v + ' mm'; } }
+    ] },
+    { title: 'Facets and tilt', items: [
+      { k: 'facL', label: 'Lower facets', min: 2, max: 16, step: 1, fmt: facetFmt },
+      { k: 'facU', label: 'Upper facets', min: 2, max: 16, step: 1, fmt: facetFmt },
+      { k: 'twist', label: 'Facet twist', min: -180, max: 180, step: 5, fmt: function (v) { return v + '°'; } },
+      { k: 'tilt', label: 'Edge tilt', min: -25, max: 25, step: 1, fmt: function (v) { return v + '°'; } }
+    ] },
+    { title: 'Clay', items: [
+      { k: 'shrink', label: 'Total shrinkage', min: 0, max: 20, step: 0.5, unit: '%' },
+      { k: 'wall', label: 'Wall thickness (wet)', min: 4, max: 20, step: 0.5, unit: 'mm' }
+    ] }
+  ];
+
+  var P = withD({});
+  var V = { unit: 'fired', surface: 'raw', glaze: 'beige', yaw: 0.5, pitch: 0.32, spin: !reduceMotion };
+  var currentId = null;
+
+  try {
+    var saved = JSON.parse(localStorage.getItem('vfd-working') || 'null');
+    if (saved && saved.P) { P = withD(saved.P); currentId = saved.id || null; setTimeout(function () { $('#name').value = saved.name || ''; }, 0); }
+  } catch (e) {}
+  function persistLocal() {
+    try { localStorage.setItem('vfd-working', JSON.stringify({ P: P, id: currentId, name: $('#name').value })); } catch (e) {}
+  }
+
+  /* ---------- geometry ---------- */
+  function polyF(n, a) {
+    if (n < 3) return 1;
+    var seg = 2 * Math.PI / n;
+    var x = ((a % seg) + seg) % seg - seg / 2;
+    return Math.cos(Math.PI / n) / Math.cos(x);
+  }
+  function scaled(p, k) {
+    var r = withD(p);
+    ['H', 'footD', 'edgeD', 'mouthD', 'neckH', 'soft'].forEach(function (key) { r[key] = p[key] * k; });
+    return r;
+  }
+  function makeModel(p) {
+    var H = p.H;
+    var zN = Math.max(24, H - Math.min(p.neckH, H - 24));
+    var rf = p.footD / 2, rE = p.edgeD / 2, rM = p.mouthD / 2;
+    var tt = Math.tan(p.tilt * DEG);
+    var z0 = H * p.edgeAt / 100;
+    function zE(th) { return clamp(z0 + tt * rE * Math.cos(th), 10, zN - 8); }
+    function base(z, ze) {
+      var t, b;
+      if (z <= ze) { t = z / ze; b = 0.3 * Math.abs(rE - rf) + 10; return rf + (rE - rf) * t + (p.curveL / 100) * 4 * t * (1 - t) * b; }
+      if (z <= zN) { t = (z - ze) / Math.max(1, zN - ze); b = 0.3 * Math.abs(rE - rM) + 10; return rE + (rM - rE) * t + (p.curveU / 100) * 4 * t * (1 - t) * b; }
+      return rM;
+    }
+    function roundR(z, ze) {
+      var s = Math.min(p.soft, ze - 2, zN - ze - 2);
+      if (s > 0.5 && Math.abs(z - ze) < s) {
+        var p0 = base(ze - s, ze), p2 = base(ze + s, ze), u = (z - (ze - s)) / (2 * s);
+        return (1 - u) * (1 - u) * p0 + 2 * u * (1 - u) * rE + u * u * p2;
+      }
+      return Math.max(1, base(z, ze));
+    }
+    function r(z, th) {
+      var ze = zE(th);
+      var n = z <= ze ? p.facL : p.facU;
+      var phi = p.twist * DEG * z / H;
+      return roundR(z, ze) * polyF(n, th - phi);
+    }
+    return { p: p, H: H, zN: zN, rf: rf, rE: rE, rM: rM, z0: zE(0) , zEdge: zE, roundR: roundR, r: r };
+  }
+  function rowsFor(m) { var C = (m.H - m.zN > 0.5) ? 6 : 0; return { L: 40, U: 30, C: C, n: 40 + 30 + C + 1 }; }
+  function rowZ(m, cfg, i, ze) {
+    if (i <= cfg.L) return ze * i / cfg.L;
+    i -= cfg.L;
+    if (i <= cfg.U) return ze + (m.zN - ze) * i / cfg.U;
+    i -= cfg.U;
+    return m.zN + (m.H - m.zN) * i / cfg.C;
+  }
+  function kWet() { return 1 / (1 - P.shrink / 100); }
+
+  var model = makeModel(P);
+
+  /* ---------- controls ---------- */
+  var inputs = {};
+  function fmtVal(it, v) { return it.fmt ? it.fmt(v) : null; }
+  function buildControls() {
+    var box = $('#controls');
+    GROUPS.forEach(function (g) {
+      var sec = document.createElement('div'); sec.className = 'group';
+      var h = document.createElement('h2'); h.textContent = g.title; h.style.margin = '0'; sec.appendChild(h);
+      g.items.forEach(function (it) {
+        var row = document.createElement('div'); row.className = 'ctl';
+        var id = 'c-' + it.k;
+        var lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = it.label;
+        if (it.unit) { var u = document.createElement('span'); u.className = 'unit'; u.textContent = it.unit; lab.appendChild(u); }
+        var rng = document.createElement('input'); rng.type = 'range'; rng.id = id; rng.min = it.min; rng.max = it.max; rng.step = it.step;
+        var out;
+        if (it.fmt) { out = document.createElement('output'); out.className = 'readout'; out.htmlFor = id; }
+        else { out = document.createElement('input'); out.type = 'number'; out.id = id + '-n'; out.min = it.min; out.max = it.max; out.step = it.step; out.setAttribute('aria-label', it.label + (it.unit ? ' in ' + it.unit : '')); }
+        row.appendChild(lab); row.appendChild(out); row.appendChild(rng);
+        sec.appendChild(row);
+        inputs[it.k] = { it: it, rng: rng, out: out };
+        rng.addEventListener('input', function () { P[it.k] = parseFloat(rng.value); syncOne(it.k); changed(); });
+        if (!it.fmt) out.addEventListener('change', function () {
+          var v = parseFloat(out.value); if (isNaN(v)) { syncOne(it.k); return; }
+          P[it.k] = clamp(v, it.min, it.max); syncOne(it.k); changed();
+        });
+      });
+      box.appendChild(sec);
+    });
+  }
+  function syncOne(k) {
+    var o = inputs[k]; if (!o) return;
+    o.rng.value = P[k];
+    if (o.it.fmt) o.out.textContent = o.it.fmt(P[k]); else o.out.value = P[k];
+  }
+  function syncAll() { Object.keys(inputs).forEach(syncOne); }
+
+  function buildPresets() {
+    var box = $('#presets');
+    PRESETS.forEach(function (pr) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = pr.name;
+      b.addEventListener('click', function () {
+        var keepClay = { shrink: P.shrink, wall: P.wall };
+        P = withD(pr.p); P.shrink = keepClay.shrink; P.wall = keepClay.wall;
+        currentId = null; $('#name').value = '';
+        syncAll(); changed(); renderSaved();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  var pending = false;
+  function changed() {
+    model = makeModel(P);
+    persistLocal();
+    if (!pending) { pending = true; requestAnimationFrame(function () { pending = false; renderAll(); }); }
+  }
+
+  /* ---------- 3D view ---------- */
+  var cv = $('#cv'), ctx = cv.getContext('2d');
+  var GLAZE = { beige: [185, 171, 146], grey: [156, 157, 153], sepia: [155, 132, 102] };
+  var CLAY = [74, 76, 77];
+  function sizeCanvas() {
+    var r = cv.getBoundingClientRect();
+    var d = Math.min(2, window.devicePixelRatio || 1);
+    var w = Math.max(10, Math.round(r.width * d)), h = Math.max(10, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  }
+  var N3 = 120;
+  var bufs = null;
+  function draw3D() {
+    var m = model, W = cv.width, Hc = cv.height;
+    ctx.clearRect(0, 0, W, Hc);
+    var cfg = rowsFor(m), R = cfg.n, N = N3, tot = R * N;
+    if (!bufs || bufs.len !== tot) bufs = { len: tot, X: new Float32Array(tot), D: new Float32Array(tot), Z: new Float32Array(tot), ZR: new Float32Array(tot), SX: new Float32Array(tot), SY: new Float32Array(tot) };
+    var X = bufs.X, D = bufs.D, Z = bufs.Z, ZR = bufs.ZR, SX = bufs.SX, SY = bufs.SY;
+    var cp = Math.cos(V.pitch), sp = Math.sin(V.pitch);
+    var maxR = Math.max(m.rf, m.rE, m.rM) + m.p.soft * 0;
+    var spanY = m.H * cp + 2 * maxR * sp, spanX = 2 * maxR;
+    var s = Math.min(W * 0.84 / spanX, Hc * 0.84 / spanY);
+    var cx = W / 2, cy = Hc / 2 + (m.rf - m.rM) * sp * s * 0.5;
+    var zeCol = new Float32Array(N);
+    var halfH = m.H / 2;
+    for (var j = 0; j < N; j++) {
+      var th = j / N * 2 * Math.PI, ze = m.zEdge(th); zeCol[j] = ze;
+      var a = th + V.yaw, ca = Math.cos(a), sa = Math.sin(a);
+      for (var i = 0; i < R; i++) {
+        var z = rowZ(m, cfg, i, ze), r = m.r(z, th), k = i * N + j;
+        var x = r * ca, d = r * sa, zz = z - halfH;
+        X[k] = x; D[k] = d; Z[k] = zz; ZR[k] = z;
+        SX[k] = cx + x * s; SY[k] = cy - zz * cp * s + d * sp * s;
+      }
+    }
+    // floor shadow
+    var fy = cy + halfH * cp * s, frx = m.rf * 1.5 * s, fry = Math.max(4, m.rf * 1.5 * s * sp);
+    ctx.save(); ctx.translate(cx, fy + fry * 0.15); ctx.scale(1, fry / frx);
+    var g = ctx.createRadialGradient(0, 0, 0, 0, 0, frx);
+    g.addColorStop(0, 'rgba(0,0,0,0.30)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, frx, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+    var Lx = -0.55, Ly = 0.55, Lz = 0.63, Ll = Math.hypot(Lx, Ly, Lz); Lx /= Ll; Ly /= Ll; Lz /= Ll;
+    var quads = [];
+    var glz = GLAZE[V.glaze], footBare = m.H * 0.08;
+    for (var i2 = 0; i2 < R - 1; i2++) {
+      for (var j2 = 0; j2 < N; j2++) {
+        var jn = (j2 + 1) % N;
+        var A = i2 * N + j2, B = i2 * N + jn, C = (i2 + 1) * N + jn, Dd = (i2 + 1) * N + j2;
+        var ux = X[C] - X[A], uy = D[C] - D[A], uz = Z[C] - Z[A];
+        var vx = X[Dd] - X[B], vy = D[Dd] - D[B], vz = Z[Dd] - Z[B];
+        // u x v points outward for this winding (diagonals)
+        var nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        var nl = Math.hypot(nx, ny, nz); if (nl < 1e-9) continue;
+        nx /= nl; ny /= nl; nz /= nl;
+        if (ny * cp + nz * sp <= 0) continue;
+        var lam = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
+        var depth = (D[A] + D[C]) * 0.5 * cp + (Z[A] + Z[C]) * 0.5 * sp;
+        var zm = (ZR[A] + ZR[C]) * 0.5;
+        var glazed = V.surface === 'top' ? zm >= zeCol[j2] - 0.01 : (V.surface === 'all' ? zm >= footBare : false);
+        quads.push([depth, A, B, C, Dd, lam, glazed]);
+      }
+    }
+    quads.sort(function (q1, q2) { return q1[0] - q2[0]; });
+    ctx.lineWidth = 0.9; ctx.lineJoin = 'round';
+    for (var q = 0; q < quads.length; q++) {
+      var Q = quads[q], base = Q[6] ? glz : CLAY;
+      var I = 0.30 + 0.70 * Q[5];
+      var col = 'rgb(' + Math.round(base[0] * I) + ',' + Math.round(base[1] * I) + ',' + Math.round(base[2] * I) + ')';
+      ctx.fillStyle = col; ctx.strokeStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(SX[Q[1]], SY[Q[1]]); ctx.lineTo(SX[Q[2]], SY[Q[2]]); ctx.lineTo(SX[Q[3]], SY[Q[3]]); ctx.lineTo(SX[Q[4]], SY[Q[4]]);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // mouth opening
+    if (sp > 0.02) {
+      var top = (R - 1) * N;
+      var topBase = (V.surface === 'raw') ? CLAY : glz;
+      ctx.beginPath();
+      for (var t = 0; t < N; t++) { var kk = top + t; if (t === 0) ctx.moveTo(SX[kk], SY[kk]); else ctx.lineTo(SX[kk], SY[kk]); }
+      ctx.closePath();
+      ctx.fillStyle = 'rgb(' + Math.round(CLAY[0] * 0.32) + ',' + Math.round(CLAY[1] * 0.32) + ',' + Math.round(CLAY[2] * 0.32) + ')';
+      ctx.fill();
+      ctx.strokeStyle = 'rgb(' + Math.round(topBase[0] * 1.05) + ',' + Math.round(topBase[1] * 1.05) + ',' + Math.round(topBase[2] * 1.05) + ')';
+      ctx.lineWidth = Math.max(1.5, P.wall * (1 - P.shrink / 100) * s * 0.55); ctx.stroke();
+    }
+  }
+
+  var drag = null;
+  cv.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, y: e.clientY, yaw: V.yaw, pitch: V.pitch }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} });
+  cv.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    V.yaw = drag.yaw - (e.clientX - drag.x) * 0.01;
+    V.pitch = clamp(drag.pitch + (e.clientY - drag.y) * 0.005, 0, 0.75);
+    if (!V.spin) draw3D();
+  });
+  function endDrag() { drag = null; }
+  cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+  var lastT = 0;
+  function loop(t) {
+    if (V.spin && !drag) { var dt = lastT ? Math.min(50, t - lastT) : 16; V.yaw += dt * 0.00035; }
+    lastT = t;
+    if (V.spin || drag) draw3D();
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- section (SVG) ---------- */
+  function sidePts(m, th) {
+    var ze = m.zEdge(th), zs = [], i, n = 180;
+    for (i = 0; i <= n; i++) zs.push(m.H * i / n);
+    zs.push(ze, m.zN);
+    var sft = Math.min(m.p.soft, ze - 2, m.zN - ze - 2);
+    if (sft > 0.5) for (i = 1; i < 12; i++) zs.push(ze - sft + 2 * sft * i / 12);
+    zs = zs.filter(function (z) { return z >= 0 && z <= m.H; }).sort(function (a, b) { return a - b; });
+    var out = [], last = -1;
+    zs.forEach(function (z) { if (z - last > 1e-6) { out.push([m.roundR(z, ze), z]); last = z; } });
+    return out;
+  }
+  function innerPts(pts, t) {
+    var res = [];
+    for (var i = 0; i < pts.length; i++) {
+      var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      var dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1;
+      var nx = dz / l, nz = -dx / l;
+      var x = pts[i][0] - nx * t, z = pts[i][1] - nz * t;
+      if (i === pts.length - 1) { x = pts[i][0] - t; z = pts[i][1]; }
+      if (z >= t && x > 0.5) res.push([x, z]);
+    }
+    if (res.length) res.unshift([res[0][0], t]);
+    return res;
+  }
+  function f0(v) { return Math.round(v); }
+  function renderSection() {
+    var k = V.unit === 'wet' ? kWet() : 1;
+    var m = makeModel(scaled(P, k));
+    var wallD = V.unit === 'wet' ? P.wall : P.wall * (1 - P.shrink / 100);
+    var R = sidePts(m, 0), L = sidePts(m, Math.PI);
+    var maxR = 0; R.concat(L).forEach(function (p) { maxR = Math.max(maxR, p[0]); });
+    var H = m.H, pad = Math.max(30, H * 0.12);
+    var x0 = -(maxR + pad), x1 = maxR + pad, y0 = -pad * 0.9, y1 = H + pad * 0.9;
+    var fs = clamp(Math.max(H, maxR * 2) * 0.034, 7, 24);
+    var Y = function (z) { return (H - z).toFixed(2); };
+    var svg = [];
+    svg.push('<svg viewBox="' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ' ' + (x1 - x0).toFixed(1) + ' ' + (y1 - y0).toFixed(1) + '" role="img" aria-label="Section of the vase with dimensions">');
+    svg.push('<rect class="bg" x="' + x0 + '" y="' + y0 + '" width="' + (x1 - x0) + '" height="' + (y1 - y0) + '"/>');
+    var gx, gy;
+    for (gx = Math.ceil(x0 / 10) * 10; gx <= x1; gx += 10) svg.push('<line class="' + (gx % 50 === 0 ? 'g-major' : 'g-minor') + '" x1="' + gx + '" y1="' + y0 + '" x2="' + gx + '" y2="' + y1 + '"/>');
+    for (gy = Math.ceil((H - y1) / 10) * 10; gy <= H - y0; gy += 10) { var yy = H - gy; svg.push('<line class="' + (gy % 50 === 0 ? 'g-major' : 'g-minor') + '" x1="' + x0 + '" y1="' + yy + '" x2="' + x1 + '" y2="' + yy + '"/>'); }
+    var outer = R.map(function (p) { return p[0].toFixed(2) + ',' + Y(p[1]); })
+      .concat(L.slice().reverse().map(function (p) { return (-p[0]).toFixed(2) + ',' + Y(p[1]); }));
+    svg.push('<polygon class="outer" points="' + outer.join(' ') + '"/>');
+    var iR = innerPts(R, wallD), iL = innerPts(L, wallD);
+    if (iR.length > 2 && iL.length > 2) {
+      var inner = iR.map(function (p) { return p[0].toFixed(2) + ',' + Y(p[1]); })
+        .concat(iL.slice().reverse().map(function (p) { return (-p[0]).toFixed(2) + ',' + Y(p[1]); }));
+      svg.push('<polygon class="inner" points="' + inner.join(' ') + '"/>');
+    }
+    svg.push('<line class="axis" x1="0" y1="' + y0 + '" x2="0" y2="' + y1 + '"/>');
+    var zeR = m.zEdge(0), zeL = m.zEdge(Math.PI);
+    svg.push('<line class="edge" x1="' + (-maxR - 8).toFixed(1) + '" y1="' + Y(zeL) + '" x2="' + (maxR + 8).toFixed(1) + '" y2="' + Y(zeR) + '"/>');
+    // labels
+    var txt = function (x, y, s, cls, anchor) { return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + fs.toFixed(1) + '" text-anchor="' + (anchor || 'middle') + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + s + '</text>'; };
+    svg.push(txt(0, -fs * 0.6, 'Ø ' + f0(m.rM * 2), ''));
+    svg.push(txt(0, H + fs * 1.35, 'Ø ' + f0(m.rf * 2), ''));
+    svg.push(txt(0, H - zeR - fs * 0.5 + (zeL - zeR) * 0.5, 'Ø ' + f0(m.rE * 2), 'acc'));
+    var lblZ = P.tilt ? f0(zeL) + '–' + f0(zeR) : f0(zeR);
+    svg.push(txt(maxR + 6, H - zeR + fs * 1.3, 'edge ' + lblZ, 'acc', 'end'));
+    var hx = x0 + pad * 0.42;
+    svg.push('<line class="dim" x1="' + hx + '" y1="0" x2="' + hx + '" y2="' + H + '"/>');
+    svg.push('<line class="dim" x1="' + (hx - 4) + '" y1="0" x2="' + (hx + 4) + '" y2="0"/><line class="dim" x1="' + (hx - 4) + '" y1="' + H + '" x2="' + (hx + 4) + '" y2="' + H + '"/>');
+    svg.push('<text x="' + (hx - fs * 0.45).toFixed(1) + '" y="' + (H / 2).toFixed(1) + '" font-size="' + fs.toFixed(1) + '" text-anchor="middle" transform="rotate(-90 ' + (hx - fs * 0.45).toFixed(1) + ' ' + (H / 2).toFixed(1) + ')">H ' + f0(H) + '</text>');
+    svg.push('</svg>');
+    $('#svgbox').innerHTML = svg.join('');
+    var faceted = P.facL >= 3 || P.facU >= 3;
+    $('#secNote').textContent = (V.unit === 'wet' ? 'Wet build sizes in mm. ' : 'Fired sizes in mm. ') + '10 mm grid. Shaded band is the wall and base at ' + (Math.round(wallD * 10) / 10) + ' mm.' + (faceted ? ' Faceted forms are shown through a corner.' : '') + (P.tilt ? ' Left and right sides show the low and high points of the tilted edge.' : '');
+  }
+
+  /* ---------- numbers ---------- */
+  function ringStats(m, z) {
+    var n = 240, per = 0, maxr = 0, px = 0, py = 0, fx = 0, fy = 0;
+    for (var i = 0; i <= n; i++) {
+      var th = i / n * 2 * Math.PI, r = m.r(z, th), x = r * Math.cos(th), y = r * Math.sin(th);
+      if (i > 0) per += Math.hypot(x - px, y - py); else { fx = x; fy = y; }
+      px = x; py = y; if (r > maxr) maxr = r;
+    }
+    return { per: per, maxD: maxr * 2 };
+  }
+  function clayMass(mw, wall) {
+    var cfg = rowsFor(mw), N = 96, area = 0, i, j;
+    var pts = [];
+    for (j = 0; j < N; j++) {
+      var th = j / N * 2 * Math.PI, ze = mw.zEdge(th), col = [];
+      for (i = 0; i < cfg.n; i++) { var z = rowZ(mw, cfg, i, ze), r = mw.r(z, th); col.push([r * Math.cos(th), r * Math.sin(th), z]); }
+      pts.push(col);
+    }
+    function tri(a, b, c) { var ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2]; return 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx); }
+    for (j = 0; j < N; j++) { var jn = (j + 1) % N; for (i = 0; i < cfg.n - 1; i++) { area += tri(pts[j][i], pts[jn][i], pts[jn][i + 1]) + tri(pts[j][i], pts[jn][i + 1], pts[j][i + 1]); } }
+    var baseA = 0; for (j = 0; j < N; j++) { var a = pts[j][0], b = pts[(j + 1) % N][0]; baseA += a[0] * b[1] - b[0] * a[1]; } baseA = Math.abs(baseA) / 2;
+    var volCm3 = (area * wall + baseA * wall) / 1000;
+    return volCm3 * 1.9 * 1.15 / 1000; // kg wet, +15% for joins and trimming
+  }
+  function renderStats() {
+    var k = kWet(), m = model, mw = makeModel(scaled(P, k));
+    var maxF = 0, maxW = 0; for (var i = 0; i <= 60; i++) { var z = m.H * i / 60; maxF = Math.max(maxF, ringStats(m, z).maxD); }
+    maxW = maxF * k;
+    var ze0 = m.zEdge(0);
+    var up = Math.atan2(m.zN - ze0, Math.abs(m.rE - m.rM)) / DEG;
+    var low = Math.atan2(ze0, Math.abs(m.rE - m.rf)) / DEG;
+    var kg = clayMass(mw, P.wall);
+    var rows = [
+      ['Height', f0(m.H) + ' mm', 'build ' + f0(m.H * k) + ' mm wet'],
+      ['Widest', f0(maxF) + ' mm', 'build ' + f0(maxW) + ' mm wet'],
+      ['Edge', f0(ze0) + ' mm up', Math.round(P.edgeAt) + '% of height' + (P.tilt ? ', tilted ' + P.tilt + '°' : '')],
+      ['Clay', '≈ ' + kg.toFixed(1) + ' kg', 'wet, incl. ~15% extra'],
+      ['Lower wall', f0(low) + '°', 'from horizontal'],
+      ['Upper wall', f0(up) + '°', 'from horizontal'],
+      ['Shrinkage', P.shrink + '%', '×' + k.toFixed(3) + ' to build size'],
+      ['Facets', (P.facL >= 3 ? P.facL : 'round') + ' / ' + (P.facU >= 3 ? P.facU : 'round'), P.twist ? 'twist ' + P.twist + '°' : 'lower / upper']
+    ];
+    $('#stats').innerHTML = rows.map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '<small>' + r[2] + '</small></dd></div>'; }).join('');
+    var adv = $('#advice'), warns = [];
+    if (up < 30) warns.push('<b>Shallow shoulder (' + f0(up) + '°).</b> Let the lower body firm up before you coil past the edge, and keep each upper coil short so the shoulder can carry it.');
+    if (low < 50) warns.push('<b>Strong flare below the edge (' + f0(low) + '°).</b> Build the lower body in two or three sessions so the wall stiffens before it takes more weight.');
+    if (P.edgeAt > 85 && P.neckH === 0) warns.push('<b>Edge very close to the rim.</b> The upper section is only ' + f0(m.zN - ze0) + ' mm tall, so the edge will read as a lip rather than a shoulder.');
+    if (warns.length) { adv.className = 'advice is-warn'; adv.innerHTML = warns.join(' '); }
+    else { adv.className = 'advice'; adv.textContent = 'Both walls are steep enough to coil without support. Firm the body to leather-hard at the edge before you start the upper section, so the line stays crisp.'; }
+  }
+
+  function sheetRows() {
+    var k = kWet(), mw = makeModel(scaled(P, k));
+    var step = mw.H > 220 ? 20 : 10, zs = [], ze = mw.zEdge(0);
+    for (var z = 0; z < mw.H - 1; z += step) zs.push(z);
+    zs.push(ze, mw.H);
+    if (mw.H - mw.zN > 1) zs.push(mw.zN);
+    zs.sort(function (a, b) { return a - b; });
+    var faceted = P.facL >= 3 || P.facU >= 3, rows = [], last = -99;
+    zs.forEach(function (z) {
+      if (Math.abs(z - last) < 2 && z !== ze) return;
+      if (rows.length && Math.abs(z - last) < 2 && z === ze) rows.pop();
+      last = z;
+      var st = ringStats(mw, z);
+      var n = z <= ze ? P.facL : P.facU;
+      var fw = n >= 3 ? 2 * mw.roundR(z, ze) * Math.sin(Math.PI / n) : null;
+      var tag = Math.abs(z - ze) < 0.01 ? (P.tilt ? 'edge (high side)' : 'edge') : (Math.abs(z - mw.zN) < 0.01 && mw.H - mw.zN > 1 ? 'collar starts' : (Math.abs(z - mw.H) < 0.01 ? 'rim' : ''));
+      rows.push({ z: z, d: st.maxD, c: st.per, fw: fw, tag: tag, edge: tag.indexOf('edge') === 0 });
+    });
+    return { rows: rows, faceted: faceted };
+  }
+  function renderSheet() {
+    var s = sheetRows();
+    var h = '<thead><tr><th scope="col">Height</th><th scope="col">Widest Ø</th><th scope="col">Circumference</th>' + (s.faceted ? '<th scope="col">Facet width</th>' : '') + '<th scope="col"></th></tr></thead><tbody>';
+    s.rows.forEach(function (r) {
+      h += '<tr' + (r.edge ? ' class="is-edge"' : '') + '><td>' + f0(r.z) + ' mm</td><td>' + f0(r.d) + ' mm</td><td>' + f0(r.c) + ' mm</td>' + (s.faceted ? '<td>' + (r.fw ? f0(r.fw) + ' mm' : '–') + '</td>' : '') + '<td style="text-align:left;font-family:var(--f-body);color:var(--muted)">' + r.tag + '</td></tr>';
+    });
+    $('#sheet').innerHTML = h + '</tbody>';
+  }
+
+  function renderAll() { renderSection(); renderStats(); renderSheet(); if (!V.spin) draw3D(); }
+
+  /* ---------- downloads ---------- */
+  function slug() { return ($('#name').value.trim() || 'vase-form').toLowerCase().replace(/[^a-z0-9áéíóöőúüű]+/gi, '-').replace(/^-|-$/g, '') || 'vase-form'; }
+  function templateSVG() {
+    var k = kWet(), mw = makeModel(scaled(P, k));
+    var sides = P.tilt ? [0, Math.PI] : [0];
+    var parts = [], ox = 15, totalW = 0, H = mw.H, top = 25, bot = 40;
+    sides.forEach(function (th, idx) {
+      var pts = sidePts(mw, th), maxR = 0; pts.forEach(function (p) { maxR = Math.max(maxR, p[0]); });
+      var back = maxR + 35;
+      var poly = pts.map(function (p) { return (ox + p[0]).toFixed(2) + ',' + (top + H - p[1]).toFixed(2); });
+      poly.push((ox + back).toFixed(2) + ',' + top.toFixed(2), (ox + back).toFixed(2) + ',' + (top + H).toFixed(2));
+      var ze = mw.zEdge(th);
+      parts.push('<polygon points="' + poly.join(' ') + '" fill="none" stroke="#000" stroke-width="0.4"/>');
+      parts.push('<line x1="' + (ox + mw.roundR(ze, ze) - 3).toFixed(2) + '" y1="' + (top + H - ze).toFixed(2) + '" x2="' + (ox + back).toFixed(2) + '" y2="' + (top + H - ze).toFixed(2) + '" stroke="#000" stroke-width="0.25" stroke-dasharray="2 1.5"/>');
+      parts.push('<text x="' + (ox + back - 3).toFixed(1) + '" y="' + (top + H - ze - 2).toFixed(1) + '" font-size="3.5" text-anchor="end" font-family="sans-serif">edge ' + f0(ze) + ' mm' + (P.tilt ? (idx === 0 ? ' (high side)' : ' (low side)') : '') + '</text>');
+      parts.push('<text x="' + (ox + back - 3).toFixed(1) + '" y="' + (top + H - 3).toFixed(1) + '" font-size="3.5" text-anchor="end" font-family="sans-serif">base: rest this edge on the bat</text>');
+      ox += back + 20; totalW = ox;
+    });
+    var W = Math.max(totalW, 140), Ht = top + H + bot;
+    var lab = ($('#name').value.trim() || 'Vase form').replace(/[<&>]/g, '');
+    var info = 'Wet profile 1:1 · H ' + f0(H) + ' mm · shrinkage ' + P.shrink + '% · fired H ' + f0(P.H) + ' mm';
+    var s = '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="' + W.toFixed(1) + 'mm" height="' + Ht.toFixed(1) + 'mm" viewBox="0 0 ' + W.toFixed(1) + ' ' + Ht.toFixed(1) + '">' +
+      '<text x="15" y="10" font-size="5" font-family="sans-serif" font-weight="bold">' + lab + '</text>' +
+      '<text x="15" y="17" font-size="3.5" font-family="sans-serif">' + info + '</text>' +
+      parts.join('') +
+      '<line x1="15" y1="' + (top + H + 18) + '" x2="115" y2="' + (top + H + 18) + '" stroke="#000" stroke-width="0.6"/>' +
+      '<line x1="15" y1="' + (top + H + 15) + '" x2="15" y2="' + (top + H + 21) + '" stroke="#000" stroke-width="0.4"/><line x1="115" y1="' + (top + H + 15) + '" x2="115" y2="' + (top + H + 21) + '" stroke="#000" stroke-width="0.4"/>' +
+      '<text x="65" y="' + (top + H + 27) + '" font-size="3.5" text-anchor="middle" font-family="sans-serif">100 mm. Print at 100% and check this bar.</text></svg>';
+    return s;
+  }
+  function sheetCSV() {
+    var s = sheetRows(), lines = ['Height (mm),Widest diameter (mm),Circumference (mm)' + (s.faceted ? ',Facet width (mm)' : '') + ',Note'];
+    s.rows.forEach(function (r) { lines.push([f0(r.z), f0(r.d), f0(r.c)].concat(s.faceted ? [r.fw ? f0(r.fw) : ''] : []).concat([r.tag]).join(',')); });
+    return lines.join('\n') + '\n';
+  }
+  function setNote(t) { $('#status').textContent = t; }
+  function offer(filename, data) {
+    var type = /\.svg$/.test(filename) ? 'image/svg+xml' : 'text/csv';
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: type })); a.download = filename;
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  $('#tplBtn').addEventListener('click', function () { offer(slug() + '-template.svg', templateSVG(), $('#tplBtn')); });
+  $('#csvBtn').addEventListener('click', function () { offer(slug() + '-coil-sheet.csv', sheetCSV(), $('#csvBtn')); });
+
+  /* ---------- saved designs ---------- */
+  var db = null, designs = [], confirmId = null, confirmTimer = null;
+  function renderSaved() {
+    var ul = $('#savedList'); ul.innerHTML = '';
+    $('#savedEmpty').hidden = designs.length > 0;
+    designs.forEach(function (d) {
+      var li = document.createElement('li'); if (d.id === currentId) li.className = 'is-current';
+      var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = d.name || 'Untitled form';
+      var meta = document.createElement('div'); meta.className = 'meta';
+      var p = d.params || {};
+      meta.textContent = (p.H ? Math.round(p.H) + ' mm tall' : '') + (p.edgeAt ? ' · edge ' + Math.round(p.edgeAt) + '%' : '') + (d.updatedAt ? ' · ' + d.updatedAt.slice(0, 10) : '');
+      var acts = document.createElement('div'); acts.className = 'acts';
+      var lb = document.createElement('button'); lb.type = 'button'; lb.textContent = 'Open';
+      lb.addEventListener('click', function () { P = withD(d.params || {}); currentId = d.id; $('#name').value = d.name || ''; syncAll(); changed(); renderSaved(); setNote('Opened “' + (d.name || 'Untitled form') + '”.'); });
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'danger';
+      del.textContent = confirmId === d.id ? 'Confirm delete' : 'Delete';
+      del.addEventListener('click', async function () {
+        if (confirmId !== d.id) { confirmId = d.id; clearTimeout(confirmTimer); confirmTimer = setTimeout(function () { confirmId = null; renderSaved(); }, 4000); renderSaved(); return; }
+        confirmId = null;
+        try { var r = await db.from('designs').delete().eq('id', d.id); if (r.error) throw r.error; designs = designs.filter(function (x) { return x.id !== d.id; }); if (currentId === d.id) currentId = null; persistLocal(); renderSaved(); setNote('Deleted “' + (d.name || 'Untitled form') + '”.'); }
+        catch (e) { setNote('Could not delete that design. Try again.'); }
+      });
+      acts.appendChild(lb); acts.appendChild(del);
+      li.appendChild(nm); li.appendChild(acts); li.appendChild(meta);
+      ul.appendChild(li);
+    });
+  }
+  async function save(asNew) {
+    if (!db) return;
+    var name = $('#name').value.trim() || 'Untitled form';
+    var now = new Date().toISOString();
+    var params = {}; for (var k in DEFAULTS) params[k] = P[k];
+    try {
+      var existing = (!asNew && currentId) ? designs.filter(function (d) { return d.id === currentId; })[0] : null;
+      var id = existing ? currentId : newId();
+      var rec = { name: name, params: params, createdAt: existing && existing.createdAt ? existing.createdAt : now, updatedAt: now };
+      var r = await db.from('designs').upsert({ id: id, data: rec, updated_at: now }); if (r.error) throw r.error;
+      currentId = id; rec.id = id; designs = [rec].concat(designs.filter(function (d) { return d.id !== id; })); persistLocal(); renderSaved();
+      setNote(existing ? 'Saved changes to “' + name + '”.' : 'Saved “' + name + '”.');
+    } catch (e) { setNote(e && e.code === 'quota_exceeded' ? 'Storage is full. Delete an old design first.' : 'Could not save. Try again.'); }
+  }
+  $('#saveBtn').addEventListener('click', function () { save(false); });
+  $('#saveNewBtn').addEventListener('click', function () { save(true); });
+  $('#name').addEventListener('input', persistLocal);
+
+  /* ---------- toggles ---------- */
+  function bindSeg(sel, attr, key) {
+    document.querySelectorAll(sel).forEach(function (b) {
+      b.addEventListener('click', function () {
+        V[key] = b.getAttribute(attr);
+        document.querySelectorAll(sel).forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        renderAll(); draw3D();
+      });
+    });
+  }
+  bindSeg('[data-surface]', 'data-surface', 'surface');
+  bindSeg('[data-glaze]', 'data-glaze', 'glaze');
+  bindSeg('[data-unit]', 'data-unit', 'unit');
+  function syncSpin() { var b = $('#spinBtn'); b.textContent = V.spin ? 'Pause' : 'Spin'; b.setAttribute('aria-pressed', String(V.spin)); }
+  $('#spinBtn').addEventListener('click', function () { V.spin = !V.spin; syncSpin(); draw3D(); });
+
+  /* ---------- boot ---------- */
+  buildControls(); buildPresets(); syncAll(); syncSpin();
+  sizeCanvas(); renderAll(); draw3D();
+  try { new ResizeObserver(function () { sizeCanvas(); draw3D(); }).observe(cv); } catch (e) { window.addEventListener('resize', function () { sizeCanvas(); draw3D(); }); }
+  requestAnimationFrame(loop);
+
+  /* ---------- Pottery Log account ---------- */
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  var SB = window.supabase && window.supabase.createClient('https://bevwgmlsgbvgnptinisy.supabase.co', 'sb_publishable_93xtMcG6Lea4Qz5rzJEJEg_CkAdXb5z', { auth: { persistSession: true, autoRefreshToken: true } });
+  var me = null;
+  function noAccount() { $('#saveBox').hidden = true; $('#saveUnavailable').hidden = false; $('#pieceBtn').closest('.mkpiece').hidden = true; }
+  async function boot() {
+    if (!SB) return noAccount();
+    var s = await SB.auth.getSession(); me = s && s.data && s.data.session && s.data.session.user;
+    if (!me) return noAccount();
+    $('#who').textContent = me.email || '';
+    db = SB;
+    var r = await SB.from('designs').select('id,data');
+    if (r.error) { setNote(/relation|does not exist|schema cache/i.test(r.error.message || '') ? 'Saving designs isn’t set up yet on the server.' : 'Saved designs could not load right now.'); return; }
+    designs = r.data.map(function (x) { var o = Object.assign({}, x.data || {}); o.id = x.id; return o; })
+      .sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); });
+    renderSaved();
+  }
+  boot();
+
+  /* ---------- start a piece from the design ---------- */
+  function snapshot() {
+    return new Promise(function (res) {
+      var was = V.spin; V.spin = false; var yaw = V.yaw, pitch = V.pitch; V.yaw = 0.5; V.pitch = 0.32; draw3D();
+      var out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
+      var c = out.getContext('2d'); var g = c.createLinearGradient(0, 0, 0, out.height);
+      g.addColorStop(0, '#f3ece4'); g.addColorStop(1, '#dccbbb'); c.fillStyle = g; c.fillRect(0, 0, out.width, out.height); c.drawImage(cv, 0, 0);
+      V.yaw = yaw; V.pitch = pitch; V.spin = was; draw3D();
+      out.toBlob(function (b) { res(b); }, 'image/jpeg', 0.88);
+    });
+  }
+  $('#pieceBtn').addEventListener('click', async function () {
+    var btn = this; if (!me || btn.disabled) return; btn.disabled = true; setNote('Creating the piece…');
+    try {
+      var k = kWet(), m = model, mw = makeModel(scaled(P, k)), name = $('#name').value.trim() || 'Untitled form';
+      var lines = ['From the Vase Designer: “' + name + '”.',
+        'Fired: H ' + f0(m.H) + ' mm · foot Ø ' + f0(P.footD) + ' · edge Ø ' + f0(P.edgeD) + ' at ' + f0(m.zEdge(0)) + ' mm · mouth Ø ' + f0(P.mouthD) + ' mm',
+        'Wet build (' + P.shrink + '% shrinkage): H ' + f0(mw.H) + ' mm · foot Ø ' + f0(P.footD * k) + ' · edge Ø ' + f0(P.edgeD * k) + ' · mouth Ø ' + f0(P.mouthD * k) + ' mm',
+        'Wall ' + P.wall + ' mm wet · clay ≈ ' + clayMass(mw, P.wall).toFixed(1) + ' kg' + ((P.facL >= 3 || P.facU >= 3) ? ' · facets ' + (P.facL >= 3 ? P.facL : 'round') + ' / ' + (P.facU >= 3 ? P.facU : 'round') : '')];
+      var id = newId(), now = Date.now(), today = new Date().toISOString().slice(0, 10), photos = [];
+      try {
+        var blob = await snapshot(), path = me.id + '/' + newId() + '.jpg';
+        var up = await SB.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg' });
+        if (!up.error) photos.push({ aid: path, src: '', stage: 'Idea' });
+      } catch (e) {}
+      var piece = { id: id, title: name, stage: 'Idea', status: 'Not for sale', form: 'Vase', forming: 'Coiled', clay: '', location: '', price: '', notes: lines.join('\n'),
+        layers: [], photos: photos, log: { Idea: { date: today, location: '' } }, created: now, updated: now };
+      var r = await SB.from('pieces').upsert({ id: id, data: piece, updated_at: new Date().toISOString() }); if (r.error) throw r.error;
+      setNote('Added “' + name + '” to My Pieces.');
+    } catch (e) { setNote('Could not create the piece. Try again.'); }
+    btn.disabled = false;
+  });
+})();
+</script>
+
+<script>
+/* ---------- language: English / Magyar ----------
+   The app is written in English. In Hungarian mode every text the page shows is swapped
+   for its translation as it appears. Saved data (stage names, materials) stays in English
+   underneath, so switching language never changes your pieces. */
+const LANG_KEY='pottery-log.lang';
+let LANG=(()=>{try{const v=localStorage.getItem(LANG_KEY);if(v==='hu'||v==='en')return v}catch(e){}return /^hu/i.test(navigator.language||'')?'hu':'en'})();
+const HU={
+/* tabs, headings */
+'My Pieces':'Darabjaim','Search':'Keresés','Settings':'Beállítások','New':'Új','Edit':'Szerkesztés','Done':'Kész','Back':'Vissza','‹ Back':'‹ Vissza',
+'Save':'Mentés','Cancel':'Mégse','Delete':'Törlés','Close':'Bezárás','Clear':'Törlés','Apply':'Alkalmaz','Reset':'Visszaállítás','Add':'Hozzáadás','Set':'Beállít','Move':'Áthelyezés',
+'Hide':'Elrejtés','Show':'Megjelenítés','Copied':'Másolva','Saved':'Mentve','Saving…':'Mentés…','Thinking…':'Gondolkodom…','Connecting…':'Kapcsolódás…','Moving…':'Áthelyezés…',
+'Account':'Fiók','Backup':'Biztonsági mentés','Studio':'Műhely','Preferences':'Beállítások','Sections':'Részek','About':'Adatok','Filters':'Szűrők','Sort by':'Rendezés',
+'Signed in as':'Bejelentkezve mint','Log out':'Kijelentkezés','Language':'Nyelv',
+'Export Backup':'Mentés exportálása','Import Backup':'Mentés importálása','Backup data':'Mentett adatok','Copy all your data as text':'Az összes adat másolása szövegként',
+'Restore from a backup':'Visszaállítás mentésből','Select all and copy':'Összes kijelölése és másolás','Restore':'Visszaállítás','Choose file':'Fájl kiválasztása','Download file':'Fájl letöltése',
+'Your pieces and photos are saved to your Pottery Log account. Only you can see them. Log in on any device to see them there.':'A darabjaid és fotóid a Pottery Log fiókodba mentődnek. Csak te látod őket. Bármelyik eszközön bejelentkezve elérheted őket.',
+'Synced to your account':'Szinkronizálva a fiókoddal','Loading your log…':'Napló betöltése…','Still loading… check your connection':'Még tölt… ellenőrizd a kapcsolatot',
+'Could not load your log. Check your connection and reload.':'Nem sikerült betölteni a naplót. Ellenőrizd a kapcsolatot és töltsd újra.',
+/* pieces list */
+'No pieces yet.':'Még nincs egy darab sem.','Active pieces':'Aktív darabok','All pieces':'Minden darab','Archived':'Archivált','Archived only':'Csak archiváltak',
+'Newest first':'Legújabb elöl','Oldest first':'Legrégebbi elöl','Title A–Z':'Cím A–Z','By location':'Hely szerint','Any':'Bármelyik','None':'Nincs',
+'Search pieces':'Darabok keresése','No pieces match these filters.':'Egy darab sem felel meg a szűrőknek.','No pieces to search through yet':'Még nincs mit keresni',
+'Select some pieces first':'Előbb jelölj ki darabokat','Set stage':'Szakasz beállítása','More actions':'További műveletek','Duplicate':'Másolat','Duplicate…':'Másolat…',
+'Number of copies':'Másolatok száma','Copies keep the clay, form, stage and layers, without photos. Handy for a set of mugs.':'A másolatok megtartják az agyagot, formát, szakaszt és rétegeket, fotók nélkül. Hasznos például egy bögrekészlethez.',
+'Back in progress':'Vissza folyamatban lévőkhöz','Untitled':'Névtelen','Untitled piece':'Névtelen darab','Tap again to delete':'Koppints újra a törléshez','Tap again to delete for good':'Koppints újra a végleges törléshez',
+'Piece added':'Darab hozzáadva','Piece deleted':'Darab törölve','Could not delete':'Nem sikerült törölni','Could not delete. Try again.':'Nem sikerült törölni. Próbáld újra.','Could not save. Try again.':'Nem sikerült menteni. Próbáld újra.',
+'No archived pieces. Long-press a piece and choose Archive to move it here.':'Nincs archivált darab. Nyomd hosszan egy darabot és válaszd az Archiválást.',
+"Pieces that didn't work out, or that you want out of the way. Open one and use ⋯ to unarchive.":'Félresikerült vagy félretett darabok. Nyisd meg és a ⋯ gombbal hozhatod vissza.',
+'Archive':'Archiválás','Unarchive':'Visszahozás',
+/* piece editor / detail */
+'Create Piece':'Darab létrehozása','Piece name':'Darab neve','Give it a name':'Adj neki nevet','Name it for me':'Nevezd el helyettem','More ideas':'Több ötlet',
+'No names came back. Try again.':'Nem jött név. Próbáld újra.','Couldn’t get names. Try again.':'Nem sikerült nevet kérni. Próbáld újra.',
+'Too many requests right now. Try again in a little while.':'Túl sok kérés. Próbáld újra kicsit később.','That photo couldn’t be read. Try another one.':'Ezt a fotót nem sikerült beolvasni. Próbálj egy másikat.',
+'Log in again to use naming.':'Jelentkezz be újra az elnevezéshez.',
+'Current Stage':'Jelenlegi szakasz','Stage':'Szakasz','Stages':'Szakaszok','Stage date':'Szakasz dátuma','Earlier stages':'Korábbi szakaszok','Status':'Állapot',
+'Form':'Forma','Forms':'Formák','Forming Method':'Formázási mód','Forming method':'Formázási mód','Forming Methods':'Formázási módok','Clay body':'Agyag','Clay Body':'Agyag','Clay Bodies':'Agyagok',
+'Location':'Hely','Locations':'Helyek','Price':'Ár','Notes':'Jegyzetek','Note':'Megjegyzés','Date':'Dátum','Weight':'Tömeg','Dimensions':'Méretek','Measurements':'Mérések',
+'Width':'Szélesség','Length':'Hosszúság','Height':'Magasság','Width x Length x Height':'Szélesség × hosszúság × magasság','No measurements yet.':'Még nincs mérés.',
+'Decoration':'Díszítés','Decorations':'Díszítések','Decoration layers':'Díszítő rétegek','No decoration layers yet':'Még nincs díszítő réteg','Layer':'Réteg','Layer colour':'Réteg színe',
+'Layer cross-section':'Rétegek keresztmetszete','No layers yet. Add one with the buttons below.':'Még nincs réteg. Adj hozzá egyet a lenti gombokkal.','Remove layer':'Réteg törlése',
+'Coats':'Rétegszám','More coats':'Több réteg','Fewer coats':'Kevesebb réteg','Dip time':'Mártási idő','Surface area':'Felület','Surface Areas':'Felületek','Application':'Felvitel','Application Methods':'Felviteli módok',
+'Type':'Típus','Name':'Név','Shape':'Forma','Thick on rim, wiped foot…':'Vastagon a peremen, letörölt talp…','e.g. Amaco Celadon':'pl. Amaco Celadon',
+'Move up':'Feljebb','Move down':'Lejjebb','Previous photo':'Előző fotó','Next photo':'Következő fotó','Crop':'Vágás','Crop photo':'Fotó vágása','Free':'Szabad',
+'Drag the frame to move it, drag a corner to resize.':'Húzd a keretet a mozgatáshoz, a sarkát az átméretezéshez.','Photo cropped':'Fotó levágva','Photo to crop':'Vágandó fotó',
+'That photo could not be cropped':'Ezt a fotót nem sikerült levágni','That photo could not be opened':'Ezt a fotót nem sikerült megnyitni','That image format could not be read':'Ezt a képformátumot nem sikerült beolvasni',
+'A photo could not be saved':'Egy fotót nem sikerült menteni','Your storage for this log is full.':'Elfogyott a tárhely ehhez a naplóhoz.',
+'This browser is out of space. Remove photos or move pieces to your account.':'Ebben a böngészőben elfogyott a hely. Törölj fotókat.',
+'Search or add new':'Keresés vagy új hozzáadása','Hidden from lists':'Elrejtve a listákból','HIDDEN':'REJTETT',
+"Nothing here yet. Tap Add, or type a new name on a piece and it's added here automatically.":'Itt még nincs semmi. Koppints a Hozzáadásra, vagy írj be új nevet egy darabnál, és ide is bekerül.',
+'Nothing yet. Type a name above to add one.':'Még semmi. Írj be fent egy nevet a hozzáadáshoz.',
+/* stages page */
+'New stage':'Új szakasz','Remove stage':'Szakasz törlése','That stage already exists':'Ez a szakasz már létezik','That name already exists':'Ez a név már létezik',
+"Renaming a stage updates every piece in it. A stage can only be removed when it's empty.":'A szakasz átnevezése minden benne lévő darabot frissít. Szakaszt csak üresen lehet törölni.',
+'This is the list of stages shown on your pieces. Tap Edit to rename, add, remove or reorder them.':'Ezek a darabjaidnál megjelenő szakaszok. A Szerkesztés gombbal átnevezheted, hozzáadhatsz, törölhetsz vagy átrendezheted őket.',
+'To stage':'Szakaszba','Stage to move pieces to':'Melyik szakaszba kerüljenek',
+/* firings */
+'Firing':'Égetés','Firing Log':'Égetési napló','Log a firing':'Égetés rögzítése','No firings yet':'Még nincs égetés','Firing saved':'Égetés mentve','Firing deleted':'Égetés törölve',
+'Pieces in this firing':'Darabok ebben az égetésben','Cone':'Kúp','Top temperature':'Csúcshőmérséklet','Schedule, hold, cooling, results':'Program, hőntartás, hűlés, eredmény',
+'Studio kiln, electric…':'Műhely kemence, elektromos…','e.g. 06 or 6':'pl. 06 vagy 6','None logged yet.':'Még nincs rögzítve.',
+'Log each kiln load with its cone, temperature and the pieces inside. You can move those pieces to the next stage at the same time.':'Rögzíts minden kemencetöltetet a kúppal, hőmérséklettel és a benne lévő darabokkal. A darabokat egyúttal a következő szakaszba is áthelyezheted.',
+'Bisque':'Zsengeégetés','Raku':'Raku','Pit / smoke':'Gödrös / füstös','Mixed':'Vegyes','Other':'Egyéb',
+/* shrinkage */
+'Shrinkage':'Zsugorodás','Clay shrinkage':'Agyag zsugorodása','Measured shrinkage':'Mért zsugorodás','Before':'Előtte','After firing':'Égetés után','Wanted fired size':'Kívánt égetett méret',
+'Make it':'Készítsd','Make it this size':'Ekkorára készítsd','Measure a piece or test bar before and after firing.':'Mérj meg egy darabot vagy próbapálcát égetés előtt és után.',
+'How big to make it so it ends up at the size you want.':'Mekkorára készítsd, hogy a kívánt méretű legyen.','Nothing to compare yet.':'Még nincs mit összehasonlítani.',
+'Averages from pieces where you logged size or weight at more than one stage.':'Átlag azokból a darabokból, ahol több szakaszban is rögzítetted a méretet vagy tömeget.','Your clay bodies':'Agyagjaid',
+/* settings */
+'Units':'Mértékegységek','Currency':'Pénznem','g (grams)':'g (gramm)','oz (ounces)':'oz (uncia)','cm (centimetres)':'cm (centiméter)','in (inches)':'in (hüvelyk)',
+'Nothing new to restore':'Nincs új visszaállítandó','That text is not a valid backup':'Ez a szöveg nem érvényes mentés','File loaded. Tap Restore.':'Fájl betöltve. Koppints a Visszaállításra.','Could not read that file':'Nem sikerült beolvasni a fájlt',
+'Restored':'Visszaállítva','Shrinkage Calculator':'Zsugorodás-kalkulátor','Dimensions unit':'Méret mértékegysége','Weight unit':'Tömeg mértékegysége','Restore data from a previous backup':'Adatok visszaállítása korábbi mentésből','Move to my account':'Áthelyezés a fiókomba',
+/* drive */
+'Google Drive':'Google Drive','Connect Google Drive':'Google Drive csatlakoztatása','Back up every piece to a Pottery Log folder in your Drive':'Minden darab mentése a Drive-od Pottery Log mappájába',
+'Back up now':'Mentés most','Backing up…':'Mentés…','Working…':'Folyamatban…','Up to date':'Naprakész','Open Pottery Log folder in Drive':'Pottery Log mappa megnyitása a Drive-ban','Disconnect Google Drive':'Google Drive leválasztása',
+'How the Drive backup works:':'Így működik a Drive mentés:','Your own folder.':'Saját mappa.','Reconnect about once an hour.':'Óránként újra kell csatlakozni.','Nothing is deleted from Drive.':'A Drive-ból semmi sem törlődik.','Private.':'Privát.',
+'Each piece gets a folder inside “Pottery Log” in your Drive, with its photos and a piece.json file holding all its details.':'Minden darab saját mappát kap a Drive-od „Pottery Log” mappájában, a fotóival és egy piece.json fájllal, ami az összes adatát tartalmazza.',
+'Google keeps the connection open for about an hour. After that your saves wait here (you’ll see “waiting”). Tap':'A Google kb. egy óráig tartja nyitva a kapcsolatot. Utána a mentéseid itt várnak (ezt látod: „vár”). Koppints a',
+'and they all go to Drive.':'gombra, és mind felkerülnek a Drive-ra.',
+'Pieces and photos you delete in the app stay in Drive, because it’s a backup. Delete them in Drive yourself if you want them gone.':'Az appban törölt darabok és fotók a Drive-on maradnak, mert ez egy biztonsági mentés. Ha nem kellenek, töröld őket a Drive-ban.',
+'Pottery Log can only see the files it made itself, never anything else in your Drive.':'A Pottery Log csak az általa létrehozott fájlokat látja, a Drive-od többi részét soha.',
+'Privacy policy':'Adatvédelmi tájékoztató','Drive is up to date':'A Drive naprakész','Backup stopped':'A mentés megszakadt',
+'Drive disconnected. Your Drive files stay where they are.':'Drive leválasztva. A fájljaid a Drive-on maradnak.',
+'Google asked you to reconnect. Tap Back up now.':'A Google újracsatlakozást kér. Koppints a Mentés most gombra.',
+'Some pieces were not backed up. Tap Back up now to try again.':'Néhány darab mentése nem sikerült. Koppints a Mentés most gombra.',
+'Google did not allow the connection. Try again, and on Google’s screen allow Pottery Log to save its files to your Drive.':'A Google nem engedélyezte a kapcsolatot. Próbáld újra, és a Google ablakában engedd, hogy a Pottery Log fájlokat mentsen a Drive-odra.',
+'The Google window was closed before you finished.':'A Google ablak bezárult, mielőtt befejezted volna.',
+'Your browser blocked the Google window. Allow pop-ups for this site and try again.':'A böngésző letiltotta a Google ablakot. Engedélyezd a felugró ablakokat ennél az oldalnál, és próbáld újra.',
+'Tick the box that lets Pottery Log save its files to your Drive, then try again.':'Pipáld be a négyzetet, ami engedi a Pottery Lognak a fájlmentést a Drive-ra, aztán próbáld újra.',
+'Google sign-in did not load. Check your connection and reload.':'A Google bejelentkezés nem töltődött be. Ellenőrizd a kapcsolatot és töltsd újra.',
+'Could not reach Google Drive. Try again.':'Nem érem el a Google Drive-ot. Próbáld újra.',
+/* login */
+'Log in':'Bejelentkezés','Create account':'Fiók létrehozása','Create an account':'Fiók létrehozása','Forgot password?':'Elfelejtett jelszó?','I already have an account':'Már van fiókom',
+'Back to log in':'Vissza a bejelentkezéshez','Send link':'Link küldése','Password':'Jelszó','New password':'Új jelszó','Save password':'Jelszó mentése','Password saved':'Jelszó mentve',
+'at least 8 characters':'legalább 8 karakter','Choose a new password.':'Válassz új jelszót.','We’ll email you a link to set a new password.':'Küldünk egy linket e-mailben az új jelszó beállításához.',
+'Log every piece: photos, weights, glazes and stages.':'Rögzíts minden darabot: fotók, tömeg, mázak és szakaszok.','Make your own free log. Only you will see your pieces.':'Készítsd el a saját ingyenes naplódat. A darabjaidat csak te látod.',
+'Wrong email or password.':'Hibás e-mail vagy jelszó.','Confirm your email first: open the link we sent you.':'Előbb erősítsd meg az e-mail címed: nyisd meg a küldött linket.',
+'There is already an account with this email. Log in instead.':'Ezzel az e-mail címmel már van fiók. Jelentkezz be.','Too many emails were sent just now. Wait a while and try again.':'Túl sok e-mail ment ki az előbb. Várj egy kicsit és próbáld újra.',
+'Use a password with at least 8 characters.':'Legalább 8 karakteres jelszót használj.','Something went wrong. Try again.':'Valami hiba történt. Próbáld újra.',
+'Pottery Log could not load. Check your internet connection and reload the page.':'A Pottery Log nem töltődött be. Ellenőrizd az internetkapcsolatot és töltsd újra az oldalt.','Email':'E-mail',
+'Added':'Hozzáadva','Firings':'Égetések','Cross-section':'Keresztmetszet','Log a Firing':'Égetés rögzítése','Move the checked pieces to':'A bejelölt darabok áthelyezése ide:','Stage…':'Szakasz…','Add photo':'Fotó hozzáadása','Select':'Kijelölés','seconds':'másodperc','Copy':'Másolás','No filters applied':'Nincs szűrő',
+'The surface layers stacked on the clay, first layer at the bottom. Thicker bands mean more coats.':'A felületi rétegek az agyagon egymásra rakva, az első legalul. A vastagabb sáv több réteget jelent.',
+'This text holds all your pieces, firings and lists. Copy it into a note or an email to yourself.':'Ez a szöveg tartalmazza az összes darabod, égetésed és listád. Másold be egy jegyzetbe, vagy küldd el magadnak e-mailben.',
+'Paste a backup here and tap Restore. Anything already in your log is kept; only missing pieces, firings and list entries are added.':'Illessz be ide egy mentést, és koppints a Visszaállításra. Ami már a naplódban van, megmarad; csak a hiányzó darabok, égetések és listaelemek kerülnek hozzá.',
+'Tap':'Koppints a','to log your first piece: photos, weight, and every glaze layer with its coats.':'gombra az első darabod rögzítéséhez: fotók, tömeg és minden mázréteg a rétegszámmal.',
+'Before naming with AI':'Mielőtt az AI elnevezi','Agree and continue':'Elfogadom és folytatom','Delete my account':'Fiókom törlése','Delete your account?':'Törlöd a fiókodat?','Delete everything':'Minden törlése','Deleting…':'Törlés…',
+'To suggest names, Pottery Log sends small copies of this piece’s photos and its details to Google’s Gemini service.':'A névjavaslatokhoz a Pottery Log elküldi a darab fotóinak kicsinyített másolatát és adatait a Google Gemini szolgáltatásának.',
+'Pottery Log uses Gemini’s free version, so Google may keep what is sent, have people review it, and use it to improve its products. What has been sent cannot be called back.':'A Pottery Log a Gemini ingyenes változatát használja, ezért a Google megőrizheti az elküldött anyagot, emberek is átnézhetik, és felhasználhatja a termékei fejlesztésére. Amit elküldtél, azt nem lehet visszavonni.',
+'Only continue if you are fine with that. You can stop any time by not using this button.':'Csak akkor folytasd, ha ez rendben van számodra. Bármikor abbahagyhatod: egyszerűen ne használd ezt a gombot.',
+'This permanently deletes your login and all your pieces, photos, firings and settings from Pottery Log. It cannot be undone.':'Ez véglegesen törli a fiókodat és az összes darabodat, fotódat, égetésedet és beállításodat a Pottery Logból. Nem vonható vissza.',
+'Copies in your Google Drive and backups you exported are not affected: they are yours to keep or delete.':'A Google Drive-on lévő másolatokat és az általad exportált mentéseket ez nem érinti: azokat te tartod meg vagy törlöd.',
+'Your account and everything in it have been deleted.':'A fiókodat és minden benne lévő adatot töröltük.',
+'Could not delete the account. Try again, or contact the app’s owner.':'Nem sikerült törölni a fiókot. Próbáld újra, vagy írj az app üzemeltetőjének.',
+'I am 18 or older and I have read the':'Elmúltam 18 éves, és elolvastam:','Please confirm that you are 18 or older and have read the Privacy policy.':'Erősítsd meg, hogy elmúltál 18 éves és elolvastad az adatvédelmi tájékoztatót.',
+'Terms of use':'Felhasználási feltételek','Wait a moment for the security check to finish, then try again.':'Várj egy pillanatot, amíg a biztonsági ellenőrzés lefut, aztán próbáld újra.',
+'The security check failed. Wait for it to finish and try again.':'A biztonsági ellenőrzés nem sikerült. Várd meg, amíg lefut, és próbáld újra.',
+'Please confirm that you are 18 or older and accept the Terms of use.':'Erősítsd meg, hogy elmúltál 18 éves és elfogadod a felhasználási feltételeket.',
+'You’ve used today’s 20 name suggestions. Try again tomorrow.':'Mára elhasználtad a 20 névjavaslatot. Próbáld újra holnap.',
+'You’re offline. This change was not saved.':'Nincs internetkapcsolat. Ez a módosítás nem mentődött el.',
+'Offline: showing your log from the last time you were online. Changes can’t be saved until you’re back online.':'Offline: a naplódat a legutóbbi online állapot szerint látod. Módosítani csak újra online lehet.',
+'Pieces':'Darabok','Designer':'Tervező','Vase Designer':'Vázatervező','Plan a form in 3D, get wet sizes and a coil sheet':'Tervezz formát 3D-ben, kapd meg a nedves méreteket és a hurkalapot','Stats':'Statisztika','Statistics':'Statisztika','Replace photo':'Fotó cseréje','Add test tile photo':'Próbalap fotó hozzáadása','Kind':'Típus','Used on':'Használva','Brand or recipe':'Márka vagy recept','Average coats':'Átlagos rétegszám',
+'Where your pieces are':'Hol tartanak a darabjaid','New pieces per month':'Új darabok havonta','Most used glazes':'Leggyakoribb mázak','Clay bodies':'Agyagok','Shrinkage per clay':'Zsugorodás agyagonként',
+'From pieces measured at two or more stages':'Legalább két szakaszban mért darabok alapján','Glazes used':'Használt máz','Not set':'Nincs megadva','Not used on any piece yet.':'Még egy darabon sincs használva.',
+'Saving photo…':'Fotó mentése…','Photo saved':'Fotó mentve','No pieces yet':'Még nincs darab','Add glaze layers to your pieces to see them here.':'Adj mázrétegeket a darabjaidhoz, és itt megjelennek.',
+'to add one, or add a layer to a piece and it appears here.':'gombra egy új hozzáadásához, vagy adj réteget egy darabhoz, és itt megjelenik.',
+/* stages, statuses (saved data stays English) */
+'Idea':'Ötlet','Formed':'Formázva','Trimmed':'Esztergálva','Bisqued':'Zsengélve','Glazed':'Mázazva','Finished':'Kész','Wet':'Nedves','Leather hard':'Bőrkemény','Bone dry':'Csontszáraz','Bisque fired':'Zsengélve','Glaze fired':'Mázégetve',
+'Not for sale':'Nem eladó','Available':'Eladó','Sold':'Eladva','Gifted':'Elajándékozva','Traded':'Elcserélve',
+/* default materials */
+'Stoneware':'Kőagyag','Grogged stoneware':'Samottos kőagyag','Porcelain':'Porcelán','Earthenware':'Cserépagyag','Terracotta':'Terrakotta',
+'Bowl':'Tál','Coffee cup':'Kávéscsésze','Jar':'Tégely','Moon jar':'Holdváza','Mug':'Bögre','Planter':'Kaspó','Plate':'Tányér','Platter':'Tálaló','Tea cup':'Teáscsésze','Test tile':'Tesztlap','Urn':'Urna','Vase':'Váza','Cup':'Csésze','Teapot':'Teáskanna',
+'Coiled':'Hurkatechnika','Mold formed':'Formába nyomott','Pinched':'Nyomkodott','Slab built':'Lapépítés','Slip cast':'Iszapöntéses','Thrown and altered':'Korongozott és alakított','Wheel thrown':'Korongozott','Wheel-thrown':'Korongozott',
+'Coil':'Hurka','Slab':'Lap','Pinch':'Nyomkodás','Mould':'Forma',
+'Bisque shelf':'Zsengepolc','Damp room':'Párás szekrény','Glaze shelf':'Mázpolc','Home':'Otthon','Kiln':'Kemence','My cubby':'Saját polcom','Drying shelf':'Szárítópolc',
+'All over':'Teljes felület','Inside':'Belül','Outside':'Kívül','Rim':'Perem','Foot':'Talp',
+'Brushed':'Ecsetelt','Bubble glazed':'Buborékmázas','Dipped':'Mártott','Poured':'Leöntött','Sponged':'Szivacsolt','Sprayed':'Szórt','Trailed':'Csurgatott','Wax resist':'Viaszos takarás',
+'Glaze':'Máz','Glazes':'Mázak','Underglaze':'Alámáz','Underglazes':'Alámázak','Slip':'Engób','Slips':'Engóbok','Slip / engobe':'Engób','Oxide':'Oxid','Oxides':'Oxidok','Stain':'Pigment','Stains':'Pigmentek','Oxide / stain':'Oxid / pigment'
+};
+const tw=w=>HU[w]||w;
+const plural=(n,one,many)=>n+' '+(n==1?one:many);
+const HU_RX=[
+[/^Move to (.+)$/,(m,s)=>'Tovább: '+tw(s)],
+ [/^(\d+) coats?$/,(m,n)=>n+' réteg'],
+ [/^(\d+)× (.+)$/,(m,n,s)=>n+'× '+tw(s)],
+ [/^(\d+)\. (.+)$/,(m,n,s)=>HU[s]?n+'. '+HU[s]:null],
+ [/^Layer (\d+)$/,(m,n)=>n+'. réteg'],
+ [/^· (.+)$/,(m,s)=>'· '+tw(s)],
+ [/^\+ (.+)$/,(m,s)=>'+ '+tw(s)],
+ [/^Date: Today • (.+)$/,(m,s)=>'Dátum: ma • '+s],
+ [/^Date: (.+)$/,(m,s)=>'Dátum: '+s],
+ [/^(.+): (\d+)$/,(m,s,n)=>HU[s]?HU[s]+': '+n:null],
+ [/^(\d+) in library · used on (\d+) pieces?$/,(m,a,b)=>a+' a könyvtárban · '+b+' darabon használva'],
+ [/^Used on (\d+) pieces?$/,(m,n)=>n+' darabon használva'],
+ [/^Pieces with (.+)$/,(m,s)=>'Darabok ezzel: '+s],
+ [/^Since (.+)$/,(m,s)=>s+' óta'],
+ [/^No (glaze|underglaze|slip|oxide|stain)s yet\. Tap$/,(m,k)=>({glaze:'Még nincs máz',underglaze:'Még nincs alámáz',slip:'Még nincs engób',oxide:'Még nincs oxid',stain:'Még nincs pigment'})[k]+'. Koppints az'],
+ [/^(\d+) left today$/,(m,n)=>'Ma még '+n],
+ [/^(\d+) selected$/,(m,n)=>n+' kijelölve'],
+ [/^(\d+) waiting$/,(m,n)=>n+' vár'],
+ [/^Last backup (.+)$/,(m,d)=>'Utolsó mentés: '+d],
+ [/^Moved to (.+)$/,(m,s)=>'Áthelyezve: '+tw(s)],
+ [/^Renamed to (.+)$/,(m,s)=>'Átnevezve: '+s],
+ [/^Named “(.+)”$/,(m,s)=>'Elnevezve: „'+s+'”'],
+ [/^Restoring (\d+) of (\d+)…$/,(m,a,b)=>'Visszaállítás: '+a+' / '+b+'…'],
+ [/^(\d+) pieces? backed up to Drive$/,(m,n)=>n+' darab mentve a Drive-ra'],
+ [/^(\d+) moved to your account$/,(m,n)=>n+' áthelyezve a fiókodba'],
+ [/^(\d+) pieces? (?:is|are) in (.+)\. Move them first\.$/,(m,n,s)=>n+' darab van itt: '+tw(s)+'. Előbb helyezd át őket.'],
+ [/^(\d+) updated$/,(m,n)=>n+' frissítve'],
+ [/^(\d+) items? restored$/,(m,n)=>n+' elem visszaállítva'],
+ [/^(\d+) cop(?:y|ies) made$/,(m,n)=>n+' másolat kész'],
+ [/^(\d+) pieces?$/,(m,n)=>n+' darab'],
+ [/^(\d+) photos?$/,(m,n)=>n+' fotó'],
+ [/^Photo (\d+)$/,(m,n)=>n+'. fotó'],
+ [/^Remove photo (\d+)$/,(m,n)=>n+'. fotó törlése'],
+ [/^Crop photo (\d+)$/,(m,n)=>n+'. fotó vágása'],
+ [/^Stage of photo (\d+)$/,(m,n)=>n+'. fotó szakasza'],
+ [/^Add “(.+)”$/,(m,s)=>'Hozzáadás: „'+s+'”'],
+ [/^Add (.+)$/,(m,s)=>HU[s]?HU[s]+' hozzáadása':null],
+ [/^New (.+)$/,(m,s)=>HU[s]?'Új '+HU[s].toLowerCase():null],
+ [/^Almost done: we sent a link to (.+)\. Open it on this device to confirm your email, then log in\.$/,(m,e)=>'Majdnem kész: küldtünk egy linket ide: '+e+'. Nyisd meg ezen az eszközön az e-mail megerősítéséhez, aztán jelentkezz be.'],
+ [/^If there is an account for (.+), a link to set a new password is on its way\. Open it on this device\.$/,(m,e)=>'Ha van fiók ezzel a címmel ('+e+'), úton van a link az új jelszóhoz. Nyisd meg ezen az eszközön.'],
+ [/^Today • (.+)$/,(m,s)=>'Ma • '+s],
+ [/^(.+):$/,(m,s)=>HU[s]?HU[s]+':':null],
+];
+function trText(t){
+  if(LANG!=='hu'||!t)return t;
+  const core=t.trim();if(!core||!/[A-Za-z]/.test(core))return t;
+  const lead=t.slice(0,t.indexOf(core)),trail=t.slice(t.indexOf(core)+core.length);
+  if(HU[core]!==undefined)return lead+HU[core]+trail;
+  for(const [rx,fn] of HU_RX){const m=core.match(rx);if(m){const r=fn(...m);if(r!=null)return lead+r+trail}}
+  if(core.includes(' · ')){const parts=core.split(' · ');const out=parts.map(p=>p.trim()?trText(p):p);if(out.some((p,i)=>p!==parts[i]))return lead+out.join(' · ')+trail}
+  return t}
+const I18N_SKIP='script,style,textarea,code,pre,[data-noi18n]';
+function trEl(el){
+  if(LANG!=='hu')return;
+  for(const a of ['placeholder','aria-label','title']){const v=el.getAttribute&&el.getAttribute(a);if(v){const n=trText(v);if(n!==v)el.setAttribute(a,n)}}}
+function trTree(root){
+  if(LANG!=='hu'||!root)return;
+  if(root.nodeType===3){if(!(root.parentElement&&root.parentElement.closest(I18N_SKIP))){const n=trText(root.nodeValue);if(n!==root.nodeValue)root.nodeValue=n}return}
+  if(root.nodeType!==1||root.closest(I18N_SKIP))return;
+  trEl(root);root.querySelectorAll('[placeholder],[aria-label],[title]').forEach(trEl);
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;const list=[];while((n=w.nextNode()))list.push(n);
+  for(const x of list){if(x.parentElement&&x.parentElement.closest(I18N_SKIP))continue;const v=trText(x.nodeValue);if(v!==x.nodeValue)x.nodeValue=v}}
+function setLang(l){try{localStorage.setItem(LANG_KEY,l)}catch(e){}location.reload()}
+document.documentElement.lang=LANG;
+if(LANG==='hu'){
+  trTree(document.body);
+  new MutationObserver(ms=>{for(const m of ms){
+    if(m.type==='characterData')trTree(m.target);
+    else if(m.type==='attributes')trEl(m.target);
+    else m.addedNodes.forEach(trTree)}})
+  .observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});
+}
+
+Object.assign(HU,{
+'Plan a coil-built form':'Hurkás építésű forma tervezése','Vase Designer':'Vázatervező',
+'Set the form in fired millimetres. You see it in 3D and as a true-scale section, then get the wet sizes to build to, a ring-by-ring coil sheet and a 1:1 profile template. Turn a design into a piece in your log when you start building it.':'Add meg a formát égetett milliméterben. 3D-ben és valós léptékű metszetben látod, és megkapod a nedves építési méreteket, a soronkénti hurkalapot és egy 1:1-es profilsablont. Ha elkezded építeni, a tervből darabot készíthetsz a naplódban.',
+'Start from':'Kiindulás','Shoulder vase':'Vállas váza','Double cone':'Dupla kúp','High edge, no neck':'Magas él, nyak nélkül','Faceted twist':'Fazettás csavart','Tilted edge':'Döntött él',
+'Profile':'Profil','Facets and tilt':'Fazetták és dőlés','Clay':'Agyag','Edge height':'Él magassága','Foot Ø':'Talp Ø','Edge Ø':'Él Ø','Mouth Ø':'Száj Ø','Collar height':'Gallér magassága',
+'Lower wall':'Alsó fal','Upper wall':'Felső fal','Edge softness':'Él lágysága','Lower facets':'Alsó fazetták','Upper facets':'Felső fazetták','Facet twist':'Fazetta csavarás','Edge tilt':'Él dőlése',
+'Total shrinkage':'Teljes zsugorodás','Wall thickness (wet)':'Falvastagság (nedves)','% of height':'a magasság %-a','Straight':'Egyenes','Crisp':'Éles','Round':'Kerek',
+'Saved designs':'Mentett tervek','Design name':'Terv neve','e.g. Edge high, 7 facets':'pl. Magas él, 7 fazetta','Save as new':'Mentés újként',
+'Saved designs appear here. Name a form and press Save to keep it.':'A mentett tervek itt jelennek meg. Adj nevet a formának, és nyomd meg a Mentést.',
+'Start a piece from this design':'Darab indítása ebből a tervből','Adds it to My Pieces as an Idea, with a 3D picture and the build sizes in its notes.':'Ötletként a Darabjaid közé kerül, 3D képpel és az építési méretekkel a jegyzetben.',
+'Log in to Pottery Log to save designs. Your current form is still kept in this browser.':'A tervek mentéséhez jelentkezz be a Pottery Logba. Az aktuális forma ebben a böngészőben megmarad.',
+'Raw clay':'Nyers agyag','Glaze above edge':'Máz az él felett','Glaze, bare foot':'Máz, csupasz talp','Drag to turn and tilt. Glaze colours are rough stand-ins, not previews.':'Húzd a forgatáshoz és döntéshez. A mázszínek csak hozzávetőlegesek.',
+'Pause':'Szünet','Spin':'Forgatás','Section':'Metszet','Fired':'Égetett','Wet build':'Nedves építés','Numbers':'Számok','Coil sheet':'Hurkalap',
+'Wet sizes to build to, measured up from the bat. The circumference is roughly the coil length for that ring.':'Nedves építési méretek a korongfejtől felfelé mérve. A kerület nagyjából az adott sor hurkájának hossza.',
+'Profile template (.svg)':'Profilsablon (.svg)','Coil sheet (.csv)':'Hurkalap (.csv)',
+'The template is the wet corner profile at 1:1. Print it at 100% and check the 100 mm bar before you cut a rib from card or plastic.':'A sablon a nedves profil 1:1 méretben. Nyomtasd 100%-on, és ellenőrizd a 100 mm-es vonalat, mielőtt kartonból vagy műanyagból kivágod.',
+'Widest Ø':'Legszélesebb Ø','Circumference':'Kerület','Facet width':'Fazettaszélesség','edge':'él','rim':'perem','collar starts':'gallér kezdete','edge (high side)':'él (magas oldal)',
+'Widest':'Legszélesebb','Edge':'Él','Facets':'Fazetták','wet, incl. ~15% extra':'nedves, ~15% ráhagyással','from horizontal':'a vízszinteshez képest','lower / upper':'alsó / felső',
+'Both walls are steep enough to coil without support. Firm the body to leather-hard at the edge before you start the upper section, so the line stays crisp.':'Mindkét fal elég meredek ahhoz, hogy támasz nélkül hurkázd. Mielőtt a felső részt kezded, hagyd bőrkeményre szikkadni a testet az élnél, hogy a vonal éles maradjon.',
+'Creating the piece…':'Darab létrehozása…','Could not create the piece. Try again.':'Nem sikerült létrehozni a darabot. Próbáld újra.','Open':'Megnyitás','Confirm delete':'Törlés megerősítése','Untitled form':'Névtelen forma',
+'Could not save. Try again.':'Nem sikerült menteni. Próbáld újra.','Saving designs isn’t set up yet on the server.':'A tervek mentése még nincs beállítva a szerveren.','Saved designs could not load right now.':'A mentett terveket most nem sikerült betölteni.'
+});
+HU_RX.unshift(
+ [/^Convex (\d+)$/,(m,n)=>'Domború '+n],[/^Concave (\d+)$/,(m,n)=>'Homorú '+n],[/^(\d+) sides$/,(m,n)=>n+' oldal'],
+ [/^build (\d+) mm wet$/,(m,n)=>'építés: '+n+' mm nedvesen'],[/^(\d+) mm up$/,(m,n)=>n+' mm magasan'],
+ [/^(\d+)% of height(, tilted (-?\d+)°)?$/,(m,n,t,d)=>'a magasság '+n+'%-a'+(t?', '+d+'°-ban döntve':'')],
+ [/^×([\d.]+) to build size$/,(m,n)=>'×'+n+' az építési mérethez'],[/^twist (-?\d+)°$/,(m,n)=>'csavarás '+n+'°'],
+ [/^Added “(.+)” to My Pieces\.$/,(m,s)=>'Hozzáadva a Darabjaidhoz: „'+s+'”.'],[/^Saved “(.+)”\.$/,(m,s)=>'Mentve: „'+s+'”.'],
+ [/^Saved changes to “(.+)”\.$/,(m,s)=>'Módosítások mentve: „'+s+'”.'],[/^Opened “(.+)”\.$/,(m,s)=>'Megnyitva: „'+s+'”.'],[/^Deleted “(.+)”\.$/,(m,s)=>'Törölve: „'+s+'”.'],
+ [/^(\d+) mm tall(.*)$/,(m,n,r)=>n+' mm magas'+r.replace(' · edge ',' · él ')]
+);
+if(LANG==='hu')trTree(document.body);
+
+</script>
+</body></html>
