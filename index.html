@@ -1251,7 +1251,7 @@ function startApp(user){
   sampleFn={limits:async()=>({images:{maxCount:2}}),
     json:async(facts,o={})=>{const images=[];for(const b of (o.images||[])){try{const small=await shrinkImg(b,768);images.push((await blobToData(small)).split(',')[1])}catch(e){}}
       if(o.signal&&o.signal.aborted){const x=new Error('cancelled');x.code='cancelled';throw x}
-      const {data,error}=await sb.functions.invoke('name-piece',{body:{facts,images}});
+      const {data,error}=await sb.functions.invoke('name-piece',{body:{facts,images,lang:LANG}});
       if(o.signal&&o.signal.aborted){const x=new Error('cancelled');x.code='cancelled';throw x}
       if(error){let code='failed';try{const j=await error.context.json();code=j.error||code}catch(e){}const x=new Error(code);x.code=code;throw x}
       return data&&data.names||[]}};

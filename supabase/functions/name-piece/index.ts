@@ -27,9 +27,10 @@ Deno.serve(async (req) => {
   if (!key) return json({ error: "no_key" }, 500);
 
   // 2. Read the piece details and up to 2 small photos
-  let body: { facts?: string; images?: string[] };
+  let body: { facts?: string; images?: string[]; lang?: string };
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400); }
   const facts = String(body.facts || "").slice(0, 2000);
+  const en = body.lang === "en"; // the site's language; Hungarian unless the site is in English
   const images = (Array.isArray(body.images) ? body.images : [])
     .filter((x) => typeof x === "string" && x.length < 1_500_000).slice(0, 2);
 
@@ -37,11 +38,14 @@ Deno.serve(async (req) => {
     `You are helping a potter name a handmade ceramic piece in their studio log.` +
     (images.length ? " The attached photo shows the piece, or a sketch or work in progress of it." : " There is no photo; use the details.") +
     `\n\nDetails:\n${facts}\n\n` +
-    `Suggest 5 short, distinctive names in Hungarian, 2 to 4 words each, with correct Hungarian accents. ` +
+    (en
+      ? `Suggest 5 short, distinctive names in English, 2 to 4 words each. `
+      : `Suggest 5 short, distinctive names in Hungarian, 2 to 4 words each, with correct Hungarian accents. `) +
     `Base every name on the SHAPE of the piece: its silhouette and proportions (tall, squat, slender, rounded, bellied, flared), ` +
     `the neck, shoulder, rim, foot and handle, and the form type (vase, bowl, mug…). ` +
     `Do NOT mention colours, glaze colours or colour words. No quotation marks, no numbering. ` +
-    `Reply with only a JSON array of 5 strings, for example ["Karcsú nyakú váza","Öblös hasú korsó"].`;
+    `Reply with only a JSON array of 5 strings, for example ` +
+    (en ? `["Slender-necked vase","Round-bellied jug"].` : `["Karcsú nyakú váza","Öblös hasú korsó"].`);
 
   const parts: unknown[] = [{ text: prompt }, ...images.map((d) => ({ inline_data: { mime_type: "image/jpeg", data: d } }))];
 
